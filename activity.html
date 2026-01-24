@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watts Happening? ⚡🚴</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+            color: #eee;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #00d4ff;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        
+        .activity-name {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+        }
+        
+        .activity-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .activity-selector select {
+            background: #1a1a3e;
+            color: #eee;
+            border: 1px solid #00d4ff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 350px;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .activity-selector select:hover {
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+        
+        .activity-selector select option {
+            background: #1a1a3e;
+            padding: 10px;
+        }
+        
+        .activity-count {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(255, 107, 107, 0.1) 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: #00d4ff;
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+        }
+        
+        .stat-card h3 {
+            font-size: 0.7em;
+            color: #888;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-card .value {
+            font-size: 1.4em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #00d4ff, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .chart-container {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .chart-container:hover {
+            border-color: rgba(0, 212, 255, 0.3);
+            box-shadow: 0 0 40px rgba(0, 212, 255, 0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, #00d4ff, #ff6b6b);
+            border-radius: 2px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #00d4ff;
+            font-size: 1.2em;
+        }
+        
+        .loading::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+        
+        svg text {
+            fill: #666;
+            font-size: 11px;
+        }
+        
+        svg .domain {
+            stroke: #333;
+        }
+        
+        svg .tick line {
+            stroke: #333;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(15, 15, 35, 0.95);
+            border: 1px solid #00d4ff;
+            border-radius: 8px;
+            padding: 12px 16px;
+            pointer-events: none;
+            font-size: 13px;
+            color: #fff;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 212, 255, 0.3);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .tooltip-title {
+            font-weight: bold;
+            color: #00d4ff;
+            margin-bottom: 8px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin: 4px 0;
+        }
+        
+        .tooltip-label {
+            color: #888;
+        }
+        
+        .tooltip-value {
+            font-weight: bold;
+        }
+        
+        .tooltip-value.power { color: #00d4ff; }
+        .tooltip-value.hr { color: #ff6b6b; }
+        .tooltip-value.cadence { color: #f9ca24; }
+        
+        .legend {
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #888;
+            transition: color 0.2s;
+            cursor: pointer;
+        }
+        
+        .legend-item:hover {
+            color: #fff;
+        }
+        
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        /* Crosshair styles */
+        .crosshair line {
+            stroke: rgba(255, 255, 255, 0.3);
+            stroke-dasharray: 3, 3;
+        }
+        
+        .focus-circle {
+            transition: r 0.1s ease;
+        }
+        
+        /* Grid lines */
+        .grid line {
+            stroke: rgba(255, 255, 255, 0.05);
+        }
+        
+        .grid path {
+            stroke-width: 0;
+        }
+        
+        /* Area gradient */
+        .area-gradient {
+            fill: url(#powerGradient);
+        }
+        
+        .nav-links {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .nav-links a {
+            color: #00d4ff;
+            text-decoration: none;
+            padding: 8px 20px;
+            border: 1px solid #00d4ff;
+            border-radius: 20px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            background: #00d4ff;
+            color: #0f0f23;
+        }
+        
+        .nav-links a.active {
+            background: #00d4ff;
+            color: #0f0f23;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Watts Happening? 🚴</h1>
+        
+        <div class="nav-links">
+            <a href="index.html">📈 Evolution</a>
+            <a href="activity.html" class="active">🔍 Activity Detail</a>
+        </div>
+        
+        <div class="activity-selector">
+            <select id="activity-select" onchange="loadSelectedActivity()">
+                <option value="">Loading activities...</option>
+            </select>
+            <span class="activity-count" id="activity-count"></span>
+        </div>
+        
+        <div id="activity-name" class="activity-name"></div>
+        
+        <div id="loading" class="loading">Loading activity data</div>
+        
+        <div id="dashboard" style="display: none;">
+            <div class="stats-grid" id="stats"></div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">Power & Heart Rate Over Time</h2>
+                <svg id="timeline-chart"></svg>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background: #00d4ff; box-shadow: 0 0 10px #00d4ff;"></div> Power (W)</div>
+                    <div class="legend-item"><div class="legend-color" style="background: #ff6b6b; box-shadow: 0 0 10px #ff6b6b;"></div> Heart Rate (bpm)</div>
+                    <div class="legend-item"><div class="legend-color" style="background: #f9ca24; box-shadow: 0 0 10px #f9ca24;"></div> Cadence (rpm)</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">Power vs Heart Rate Correlation</h2>
+                <svg id="scatter-chart"></svg>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">Heart Rate by Power Zone</h2>
+                <svg id="zones-chart"></svg>
+            </div>
+        </div>
+    </div>
+    
+    <div id="tooltip" class="tooltip" style="display: none;"></div>
+    
+    <script>
+    // Global tooltip
+    const tooltip = d3.select('#tooltip');
+    let activitiesIndex = null;
+    
+    function showTooltip(html, event) {
+        tooltip
+            .html(html)
+            .style('display', 'block')
+            .style('left', (event.pageX + 15) + 'px')
+            .style('top', (event.pageY - 10) + 'px');
+    }
+    
+    function hideTooltip() {
+        tooltip.style('display', 'none');
+    }
+    
+    async function loadIndex() {
+        try {
+            const response = await fetch('data/index.json');
+            activitiesIndex = await response.json();
+            
+            const select = document.getElementById('activity-select');
+            select.innerHTML = activitiesIndex.activities.map(a => {
+                const date = new Date(a.start_date).toLocaleDateString('en-US', { 
+                    month: 'short', day: 'numeric', year: 'numeric' 
+                });
+                const duration = `${Math.floor(a.moving_time / 60)}min`;
+                const shortName = a.name.replace('Zwift - ', '');
+                return `<option value="${a.id}">${date} - ${shortName} (${duration})</option>`;
+            }).join('');
+            
+            document.getElementById('activity-count').textContent = 
+                `${activitiesIndex.activities.length} activities`;
+            
+            // Check for URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const activityId = urlParams.get('id');
+            
+            if (activityId && activitiesIndex.activities.some(a => a.id == activityId)) {
+                select.value = activityId;
+            }
+            
+            // Load the selected or most recent activity
+            if (activitiesIndex.activities.length > 0) {
+                loadSelectedActivity();
+            }
+        } catch (error) {
+            document.getElementById('loading').innerHTML = 
+                '⚠️ No data found.<br><small>Run <code>cargo run</code> first!</small>';
+            console.error('Error loading index:', error);
+        }
+    }
+    
+    async function loadSelectedActivity() {
+        const activityId = document.getElementById('activity-select').value;
+        if (!activityId) return;
+        
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('dashboard').style.display = 'none';
+        
+        try {
+            const response = await fetch(`data/activities/${activityId}.json`);
+            const activity = await response.json();
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('activity-name').textContent = activity.name;
+            
+            // Clear previous charts
+            d3.select('#timeline-chart').selectAll('*').remove();
+            d3.select('#scatter-chart').selectAll('*').remove();
+            d3.select('#zones-chart').selectAll('*').remove();
+            
+            displayStats(activity);
+            createTimelineChart(activity);
+            createScatterChart(activity);
+            createZonesChart(activity);
+            
+        } catch (error) {
+            document.getElementById('loading').innerHTML = 
+                `⚠️ Could not load activity ${activityId}`;
+            console.error('Error:', error);
+        }
+    }
+    
+    // Initialize
+    loadIndex();
+    
+    function displayStats(activity) {
+        const streams = activity.streams;
+        const watts = streams.watts || [];
+        const hr = streams.heartrate || [];
+        const cadence = streams.cadence || [];
+        
+        const avgPower = watts.length ? (watts.reduce((a,b) => a+b, 0) / watts.length) : 0;
+        const maxPower = watts.length ? Math.max(...watts) : 0;
+        const avgHR = hr.length ? (hr.reduce((a,b) => a+b, 0) / hr.length) : 0;
+        const maxHR = hr.length ? Math.max(...hr) : 0;
+        const avgCadence = cadence.length ? (cadence.reduce((a,b) => a+b, 0) / cadence.length) : 0;
+        
+        const efficiency = avgHR > 0 ? (avgPower / avgHR).toFixed(2) : 'N/A';
+        
+        const duration = activity.moving_time;
+        const hours = Math.floor(duration / 3600);
+        const mins = Math.floor((duration % 3600) / 60);
+        
+        const statCards = [
+            { title: 'Duration', value: `${hours}h ${mins}m`, icon: '⏱️' },
+            { title: 'Distance', value: `${(activity.distance / 1000).toFixed(1)} km`, icon: '📍' },
+            { title: 'Avg Power', value: `${avgPower.toFixed(0)} W`, icon: '⚡' },
+            { title: 'Max Power', value: `${maxPower} W`, icon: '💪' },
+            { title: 'Avg HR', value: `${avgHR.toFixed(0)} bpm`, icon: '❤️' },
+            { title: 'Max HR', value: `${maxHR} bpm`, icon: '🔥' },
+            { title: 'Avg Cadence', value: `${avgCadence.toFixed(0)} rpm`, icon: '🔄' },
+            { title: 'Efficiency', value: `${efficiency} W/bpm`, icon: '📊' },
+        ];
+        
+        document.getElementById('stats').innerHTML = statCards.map(stat => `
+            <div class="stat-card">
+                <h3>${stat.title}</h3>
+                <div class="value">${stat.value}</div>
+            </div>
+        `).join('');
+    }
+    
+    function createTimelineChart(activity) {
+        const streams = activity.streams;
+        if (!streams.time || !streams.watts) return;
+        
+        const margin = { top: 30, right: 70, bottom: 50, left: 70 };
+        const width = 1200 - margin.left - margin.right;
+        const height = 350 - margin.top - margin.bottom;
+        
+        // Sample data
+        const sampleRate = Math.max(1, Math.floor(streams.time.length / 600));
+        const data = streams.time
+            .filter((_, i) => i % sampleRate === 0)
+            .map((t, idx) => {
+                const i = idx * sampleRate;
+                return {
+                    time: t,
+                    watts: streams.watts[i] || 0,
+                    hr: streams.heartrate ? streams.heartrate[i] || 0 : 0,
+                    cadence: streams.cadence ? streams.cadence[i] || 0 : 0
+                };
+            });
+        
+        const svg = d3.select('#timeline-chart')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        // Gradient for area
+        const defs = svg.append('defs');
+        const gradient = defs.append('linearGradient')
+            .attr('id', 'powerGradient')
+            .attr('x1', '0%').attr('y1', '0%')
+            .attr('x2', '0%').attr('y2', '100%');
+        gradient.append('stop').attr('offset', '0%').attr('stop-color', '#00d4ff').attr('stop-opacity', 0.4);
+        gradient.append('stop').attr('offset', '100%').attr('stop-color', '#00d4ff').attr('stop-opacity', 0.05);
+        
+        // Scales
+        const x = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.time)])
+            .range([0, width]);
+        
+        const yPower = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.watts) * 1.15])
+            .range([height, 0]);
+        
+        const yHR = d3.scaleLinear()
+            .domain([d3.min(data, d => d.hr) * 0.85, d3.max(data, d => d.hr) * 1.1])
+            .range([height, 0]);
+        
+        // Grid lines
+        svg.append('g')
+            .attr('class', 'grid')
+            .call(d3.axisLeft(yPower)
+                .tickSize(-width)
+                .tickFormat('')
+                .ticks(6));
+        
+        // Area under power curve
+        const area = d3.area()
+            .x(d => x(d.time))
+            .y0(height)
+            .y1(d => yPower(d.watts))
+            .curve(d3.curveMonotoneX);
+        
+        svg.append('path')
+            .datum(data)
+            .attr('class', 'area-gradient')
+            .attr('d', area);
+        
+        // X axis
+        svg.append('g')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x)
+                .tickFormat(d => {
+                    const mins = Math.floor(d / 60);
+                    return mins < 60 ? `${mins}m` : `${Math.floor(mins/60)}h${mins%60}m`;
+                })
+                .ticks(10));
+        
+        // Left Y axis (Power)
+        svg.append('g')
+            .call(d3.axisLeft(yPower).ticks(6))
+            .append('text')
+            .attr('fill', '#00d4ff')
+            .attr('transform', 'rotate(-90)')
+            .attr('y', -50)
+            .attr('x', -height/2)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .text('Power (W)');
+        
+        // Right Y axis (HR)
+        svg.append('g')
+            .attr('transform', `translate(${width},0)`)
+            .call(d3.axisRight(yHR).ticks(6))
+            .append('text')
+            .attr('fill', '#ff6b6b')
+            .attr('transform', 'rotate(-90)')
+            .attr('y', 50)
+            .attr('x', -height/2)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .text('Heart Rate (bpm)');
+        
+        // Power line
+        const powerLine = d3.line()
+            .x(d => x(d.time))
+            .y(d => yPower(d.watts))
+            .curve(d3.curveMonotoneX);
+        
+        svg.append('path')
+            .datum(data)
+            .attr('fill', 'none')
+            .attr('stroke', '#00d4ff')
+            .attr('stroke-width', 2)
+            .attr('d', powerLine);
+        
+        // HR line
+        if (streams.heartrate) {
+            const hrLine = d3.line()
+                .x(d => x(d.time))
+                .y(d => yHR(d.hr))
+                .curve(d3.curveMonotoneX);
+            
+            svg.append('path')
+                .datum(data)
+                .attr('fill', 'none')
+                .attr('stroke', '#ff6b6b')
+                .attr('stroke-width', 2)
+                .attr('d', hrLine);
+        }
+        
+        // Interactive overlay
+        const focus = svg.append('g').style('display', 'none');
+        
+        focus.append('line')
+            .attr('class', 'crosshair-y')
+            .attr('stroke', 'rgba(255,255,255,0.4)')
+            .attr('stroke-dasharray', '3,3')
+            .attr('y1', 0)
+            .attr('y2', height);
+        
+        focus.append('circle')
+            .attr('class', 'focus-power')
+            .attr('r', 6)
+            .attr('fill', '#00d4ff')
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 2);
+        
+        focus.append('circle')
+            .attr('class', 'focus-hr')
+            .attr('r', 6)
+            .attr('fill', '#ff6b6b')
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 2);
+        
+        svg.append('rect')
+            .attr('width', width)
+            .attr('height', height)
+            .attr('fill', 'none')
+            .attr('pointer-events', 'all')
+            .on('mouseover', () => focus.style('display', null))
+            .on('mouseout', () => {
+                focus.style('display', 'none');
+                hideTooltip();
+            })
+            .on('mousemove', function(event) {
+                const [mx] = d3.pointer(event);
+                const timeValue = x.invert(mx);
+                const bisect = d3.bisector(d => d.time).left;
+                const idx = bisect(data, timeValue);
+                const d = data[Math.min(idx, data.length - 1)];
+                
+                focus.select('.crosshair-y')
+                    .attr('x1', x(d.time))
+                    .attr('x2', x(d.time));
+                
+                focus.select('.focus-power')
+                    .attr('cx', x(d.time))
+                    .attr('cy', yPower(d.watts));
+                
+                focus.select('.focus-hr')
+                    .attr('cx', x(d.time))
+                    .attr('cy', yHR(d.hr));
+                
+                const mins = Math.floor(d.time / 60);
+                const secs = d.time % 60;
+                
+                showTooltip(`
+                    <div class="tooltip-title">Time: ${mins}:${secs.toString().padStart(2, '0')}</div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Power</span>
+                        <span class="tooltip-value power">${d.watts} W</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Heart Rate</span>
+                        <span class="tooltip-value hr">${d.hr} bpm</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Cadence</span>
+                        <span class="tooltip-value cadence">${d.cadence} rpm</span>
+                    </div>
+                `, event);
+            });
+    }
+    
+    function createScatterChart(activity) {
+        const streams = activity.streams;
+        if (!streams.watts || !streams.heartrate) return;
+        
+        const margin = { top: 30, right: 30, bottom: 60, left: 70 };
+        const width = 650 - margin.left - margin.right;
+        const height = 450 - margin.top - margin.bottom;
+        
+        const data = streams.watts.map((w, i) => ({
+            watts: w,
+            hr: streams.heartrate[i]
+        })).filter(d => d.watts > 0 && d.hr > 0);
+        
+        const sampleRate = Math.max(1, Math.floor(data.length / 400));
+        const sampledData = data.filter((_, i) => i % sampleRate === 0);
+        
+        const svg = d3.select('#scatter-chart')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        // Gradient for dots
+        const defs = svg.append('defs');
+        const radialGradient = defs.append('radialGradient')
+            .attr('id', 'dotGradient');
+        radialGradient.append('stop').attr('offset', '0%').attr('stop-color', '#00d4ff');
+        radialGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0066ff');
+        
+        const x = d3.scaleLinear()
+            .domain([0, d3.max(sampledData, d => d.watts) * 1.1])
+            .range([0, width]);
+        
+        const y = d3.scaleLinear()
+            .domain([d3.min(sampledData, d => d.hr) * 0.9, d3.max(sampledData, d => d.hr) * 1.05])
+            .range([height, 0]);
+        
+        // Grid
+        svg.append('g')
+            .attr('class', 'grid')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x).tickSize(-height).tickFormat(''));
+        
+        svg.append('g')
+            .attr('class', 'grid')
+            .call(d3.axisLeft(y).tickSize(-width).tickFormat(''));
+        
+        // Axes
+        svg.append('g')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x))
+            .append('text')
+            .attr('fill', '#888')
+            .attr('x', width/2)
+            .attr('y', 45)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .text('Power (W)');
+        
+        svg.append('g')
+            .call(d3.axisLeft(y))
+            .append('text')
+            .attr('fill', '#888')
+            .attr('transform', 'rotate(-90)')
+            .attr('y', -50)
+            .attr('x', -height/2)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .text('Heart Rate (bpm)');
+        
+        // Trend line
+        const xMean = d3.mean(sampledData, d => d.watts);
+        const yMean = d3.mean(sampledData, d => d.hr);
+        const slope = d3.sum(sampledData, d => (d.watts - xMean) * (d.hr - yMean)) / 
+                      d3.sum(sampledData, d => (d.watts - xMean) ** 2);
+        const intercept = yMean - slope * xMean;
+        
+        const xExtent = d3.extent(sampledData, d => d.watts);
+        svg.append('line')
+            .attr('x1', x(xExtent[0]))
+            .attr('y1', y(slope * xExtent[0] + intercept))
+            .attr('x2', x(xExtent[1]))
+            .attr('y2', y(slope * xExtent[1] + intercept))
+            .attr('stroke', '#ff6b6b')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '8,4')
+            .attr('opacity', 0.8);
+        
+        // Dots with hover
+        svg.selectAll('circle')
+            .data(sampledData)
+            .enter()
+            .append('circle')
+            .attr('cx', d => x(d.watts))
+            .attr('cy', d => y(d.hr))
+            .attr('r', 4)
+            .attr('fill', '#00d4ff')
+            .attr('opacity', 0.5)
+            .attr('cursor', 'pointer')
+            .on('mouseover', function(event, d) {
+                d3.select(this)
+                    .transition().duration(100)
+                    .attr('r', 8)
+                    .attr('opacity', 1);
+                
+                showTooltip(`
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Power</span>
+                        <span class="tooltip-value power">${d.watts} W</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Heart Rate</span>
+                        <span class="tooltip-value hr">${d.hr} bpm</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Ratio</span>
+                        <span class="tooltip-value">${(d.watts / d.hr).toFixed(2)} W/bpm</span>
+                    </div>
+                `, event);
+            })
+            .on('mouseout', function() {
+                d3.select(this)
+                    .transition().duration(100)
+                    .attr('r', 4)
+                    .attr('opacity', 0.5);
+                hideTooltip();
+            });
+        
+        // Correlation label
+        const correlation = calculateCorrelation(sampledData);
+        svg.append('text')
+            .attr('x', width - 10)
+            .attr('y', 20)
+            .attr('text-anchor', 'end')
+            .attr('fill', '#888')
+            .style('font-size', '12px')
+            .text(`r = ${correlation.toFixed(3)}`);
+    }
+    
+    function calculateCorrelation(data) {
+        const n = data.length;
+        const sumX = d3.sum(data, d => d.watts);
+        const sumY = d3.sum(data, d => d.hr);
+        const sumXY = d3.sum(data, d => d.watts * d.hr);
+        const sumX2 = d3.sum(data, d => d.watts ** 2);
+        const sumY2 = d3.sum(data, d => d.hr ** 2);
+        
+        return (n * sumXY - sumX * sumY) / 
+               Math.sqrt((n * sumX2 - sumX ** 2) * (n * sumY2 - sumY ** 2));
+    }
+    
+    function createZonesChart(activity) {
+        const streams = activity.streams;
+        if (!streams.watts || !streams.heartrate) return;
+        
+        const margin = { top: 30, right: 30, bottom: 60, left: 70 };
+        const width = 550 - margin.left - margin.right;
+        const height = 450 - margin.top - margin.bottom;
+        
+        const avgPower = d3.mean(streams.watts.filter(w => w > 0));
+        const zones = [
+            { name: 'Recovery', min: 0, max: avgPower * 0.55, color: '#4ecdc4' },
+            { name: 'Endurance', min: avgPower * 0.55, max: avgPower * 0.75, color: '#45b7d1' },
+            { name: 'Tempo', min: avgPower * 0.75, max: avgPower * 0.9, color: '#96ceb4' },
+            { name: 'Threshold', min: avgPower * 0.9, max: avgPower * 1.05, color: '#f9ca24' },
+            { name: 'VO2max', min: avgPower * 1.05, max: avgPower * 1.2, color: '#f0932b' },
+            { name: 'Anaerobic', min: avgPower * 1.2, max: Infinity, color: '#eb4d4b' },
+        ];
+        
+        const zoneData = zones.map(zone => {
+            const hrValues = streams.watts
+                .map((w, i) => ({ watts: w, hr: streams.heartrate[i] }))
+                .filter(d => d.watts >= zone.min && d.watts < zone.max && d.hr > 0)
+                .map(d => d.hr);
+            
+            return {
+                ...zone,
+                avgHR: hrValues.length ? d3.mean(hrValues) : 0,
+                minHR: hrValues.length ? d3.min(hrValues) : 0,
+                maxHR: hrValues.length ? d3.max(hrValues) : 0,
+                count: hrValues.length,
+                timePercent: (hrValues.length / streams.watts.length * 100)
+            };
+        }).filter(z => z.count > 5);
+        
+        const svg = d3.select('#zones-chart')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        const x = d3.scaleBand()
+            .domain(zoneData.map(d => d.name))
+            .range([0, width])
+            .padding(0.25);
+        
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(zoneData, d => d.maxHR) * 1.1])
+            .range([height, 0]);
+        
+        // Grid
+        svg.append('g')
+            .attr('class', 'grid')
+            .call(d3.axisLeft(y).tickSize(-width).tickFormat(''));
+        
+        svg.append('g')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x))
+            .selectAll('text')
+            .style('font-size', '11px');
+        
+        svg.append('g')
+            .call(d3.axisLeft(y))
+            .append('text')
+            .attr('fill', '#888')
+            .attr('transform', 'rotate(-90)')
+            .attr('y', -50)
+            .attr('x', -height/2)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .text('Heart Rate (bpm)');
+        
+        // Bars with animation
+        svg.selectAll('rect')
+            .data(zoneData)
+            .enter()
+            .append('rect')
+            .attr('x', d => x(d.name))
+            .attr('y', height)
+            .attr('width', x.bandwidth())
+            .attr('height', 0)
+            .attr('fill', d => d.color)
+            .attr('rx', 6)
+            .attr('cursor', 'pointer')
+            .on('mouseover', function(event, d) {
+                d3.select(this)
+                    .transition().duration(100)
+                    .attr('opacity', 0.8)
+                    .attr('transform', 'scale(1.02)');
+                
+                showTooltip(`
+                    <div class="tooltip-title">${d.name} Zone</div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Power Range</span>
+                        <span class="tooltip-value power">${d.min.toFixed(0)}-${d.max === Infinity ? '∞' : d.max.toFixed(0)} W</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Avg HR</span>
+                        <span class="tooltip-value hr">${d.avgHR.toFixed(0)} bpm</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">HR Range</span>
+                        <span class="tooltip-value">${d.minHR}-${d.maxHR} bpm</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Time in Zone</span>
+                        <span class="tooltip-value">${d.timePercent.toFixed(1)}%</span>
+                    </div>
+                `, event);
+            })
+            .on('mouseout', function() {
+                d3.select(this)
+                    .transition().duration(100)
+                    .attr('opacity', 1)
+                    .attr('transform', 'scale(1)');
+                hideTooltip();
+            })
+            .transition()
+            .duration(800)
+            .delay((d, i) => i * 100)
+            .attr('y', d => y(d.avgHR))
+            .attr('height', d => height - y(d.avgHR));
+        
+        // Value labels
+        svg.selectAll('.label')
+            .data(zoneData)
+            .enter()
+            .append('text')
+            .attr('x', d => x(d.name) + x.bandwidth() / 2)
+            .attr('y', d => y(d.avgHR) - 8)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#fff')
+            .style('font-size', '12px')
+            .style('font-weight', 'bold')
+            .style('opacity', 0)
+            .text(d => `${d.avgHR.toFixed(0)}`)
+            .transition()
+            .duration(800)
+            .delay((d, i) => i * 100 + 400)
+            .style('opacity', 1);
+    }
+    </script>
+</body>
+</html>

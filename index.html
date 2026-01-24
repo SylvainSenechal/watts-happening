@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watts Happening? ⚡🚴 - Performance Evolution</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+            color: #eee;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #00d4ff;
+            text-align: center;
+            margin-bottom: 5px;
+            font-size: 2.5em;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .nav-links {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .nav-links a {
+            color: #00d4ff;
+            text-decoration: none;
+            padding: 8px 20px;
+            border: 1px solid #00d4ff;
+            border-radius: 20px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            background: #00d4ff;
+            color: #0f0f23;
+        }
+        
+        .nav-links a.active {
+            background: #00d4ff;
+            color: #0f0f23;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 1.3em;
+            color: #888;
+        }
+        
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-card h3 {
+            color: #888;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        
+        .stat-card .trend {
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .stat-card .trend.up { color: #2ecc71; }
+        .stat-card .trend.down { color: #ff6b6b; }
+        .stat-card .trend.neutral { color: #888; }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .chart-title {
+            color: #fff;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-description {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        svg {
+            width: 100%;
+            overflow: visible;
+        }
+        
+        .axis text {
+            fill: #888;
+            font-size: 11px;
+        }
+        
+        .axis path, .axis line {
+            stroke: #333;
+        }
+        
+        .grid line {
+            stroke: rgba(255, 255, 255, 0.05);
+        }
+        
+        .grid path {
+            stroke-width: 0;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(20, 20, 40, 0.95);
+            border: 1px solid #00d4ff;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            max-width: 300px;
+        }
+        
+        .tooltip-title {
+            font-weight: bold;
+            color: #00d4ff;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            gap: 15px;
+        }
+        
+        .tooltip-label { color: #888; }
+        .tooltip-value { font-weight: bold; }
+        
+        .legend {
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        
+        .data-point {
+            cursor: pointer;
+            transition: r 0.2s ease;
+        }
+        
+        .data-point:hover {
+            r: 8;
+        }
+        
+        .trend-line {
+            fill: none;
+            stroke-width: 2;
+            stroke-dasharray: 5, 5;
+            opacity: 0.7;
+        }
+        
+        .metric-explanation {
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 3px solid #00d4ff;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        
+        .metric-explanation strong {
+            color: #00d4ff;
+        }
+        
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        
+        @media (max-width: 900px) {
+            .two-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .activity-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        
+        .activity-table th {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 2px solid #333;
+            color: #888;
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            letter-spacing: 0.5px;
+        }
+        
+        .activity-table td {
+            padding: 10px;
+            border-bottom: 1px solid #222;
+        }
+        
+        .activity-table tr:hover {
+            background: rgba(0, 212, 255, 0.05);
+        }
+        
+        .activity-table .date { color: #888; }
+        .activity-table .name { color: #fff; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .activity-table .metric { text-align: right; }
+        .activity-table .good { color: #2ecc71; }
+        .activity-table .bad { color: #ff6b6b; }
+        
+        .view-link {
+            color: #00d4ff;
+            text-decoration: none;
+            font-size: 0.85em;
+        }
+        
+        .view-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Watts Happening? 🚴</h1>
+        <p class="subtitle">Performance Evolution Dashboard</p>
+        
+        <div class="nav-links">
+            <a href="index.html" class="active">📈 Evolution</a>
+            <a href="activity.html">🔍 Activity Detail</a>
+        </div>
+        
+        <div id="loading" class="loading">Loading performance data...</div>
+        
+        <div id="dashboard" style="display: none;">
+            <div class="stats-overview" id="overview-stats"></div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">📈 Efficiency Evolution (Avg W / Avg HR)</h2>
+                <div class="metric-explanation">
+                    <strong>Simple Efficiency</strong> = Average Power ÷ Average HR. 
+                    A basic measure of cardiovascular fitness. Quick to understand but doesn't account for effort variability.
+                </div>
+                <svg id="efficiency-chart"></svg>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">⚡ Efficiency Factor (NP / Avg HR)</h2>
+                <div class="metric-explanation">
+                    <strong>Efficiency Factor</strong> = Normalized Power ÷ Average HR. 
+                    The proper metric used by intervals.icu! NP uses a 30-second rolling average raised to the 4th power, 
+                    which better accounts for the true physiological cost of variable efforts (intervals, surges). 
+                    This also helps with HR lag since the 30s window smooths power to match HR response time.
+                </div>
+                <svg id="ef-chart"></svg>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">🫀 Estimated VO2max Trend</h2>
+                <div class="metric-explanation">
+                    <strong>VO2max</strong> (ml/kg/min) estimates your maximum oxygen uptake capacity.
+                    Calculated using the power-to-heart rate relationship during your rides.
+                    Elite cyclists typically have 70-85 ml/kg/min, recreational cyclists 40-50 ml/kg/min.
+                </div>
+                <svg id="vo2max-chart"></svg>
+            </div>
+            
+            <div class="two-columns">
+                <div class="chart-container">
+                    <h2 class="chart-title">⚡ Average Power Trend</h2>
+                    <svg id="power-chart"></svg>
+                </div>
+                
+                <div class="chart-container">
+                    <h2 class="chart-title">❤️ Average Heart Rate Trend</h2>
+                    <svg id="hr-chart"></svg>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">🔄 Aerobic Decoupling Over Time</h2>
+                <div class="metric-explanation">
+                    <strong>Aerobic Decoupling (Pa:Hr)</strong> measures how much your heart rate drifts 
+                    relative to power during the second half vs first half of a ride. Lower values (&lt;5%) 
+                    indicate better aerobic endurance. High values (&gt;10%) suggest fatigue or poor pacing.
+                </div>
+                <svg id="decoupling-chart"></svg>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">🏆 Power PRs Over Time</h2>
+                <div class="metric-explanation">
+                    <strong>Best Power Efforts</strong> track your peak 1-minute, 5-minute, and 20-minute power.
+                    These show raw strength gains! 20-min power is often used to estimate FTP (≈ 95% of 20min power).
+                    Seeing these go up = you're getting stronger.
+                </div>
+                <svg id="best-efforts-chart"></svg>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background: #e74c3c;"></div> Best 1 min</div>
+                    <div class="legend-item"><div class="legend-color" style="background: #f39c12;"></div> Best 5 min</div>
+                    <div class="legend-item"><div class="legend-color" style="background: #2ecc71;"></div> Best 20 min</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">📅 Weekly Training Volume</h2>
+                <div class="metric-explanation">
+                    <strong>Consistency is key!</strong> This shows your weekly training hours and estimated TSS (Training Stress Score).
+                    Look for gradual increases of ~10% per week max. Big jumps = injury risk. Dips are fine for recovery weeks.
+                </div>
+                <svg id="weekly-volume-chart"></svg>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background: #3498db;"></div> Hours</div>
+                    <div class="legend-item"><div class="legend-color" style="background: #e74c3c;"></div> TSS</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">🎯 Training Zone Distribution (All Time)</h2>
+                <div class="metric-explanation">
+                    <strong>Are you training the right zones?</strong> For endurance base building, you want 70-80% in Z1-Z2.
+                    Too much Z3 ("grey zone") doesn't build base OR top-end. For intervals, aim for specific Z4-Z5 work.
+                </div>
+                <svg id="zone-summary-chart"></svg>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="chart-title">📊 Recent Activities</h2>
+                <table class="activity-table" id="activity-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Activity</th>
+                            <th class="metric">Duration</th>
+                            <th class="metric">Avg W</th>
+                            <th class="metric">NP</th>
+                            <th class="metric">Avg HR</th>
+                            <th class="metric">EF</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="activity-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div id="tooltip" class="tooltip" style="display: none;"></div>
+    
+    <script>
+    const tooltip = d3.select('#tooltip');
+    let allActivities = [];
+    
+    function showTooltip(html, event) {
+        tooltip
+            .html(html)
+            .style('display', 'block')
+            .style('left', (event.pageX + 15) + 'px')
+            .style('top', (event.pageY - 10) + 'px');
+    }
+    
+    function hideTooltip() {
+        tooltip.style('display', 'none');
+    }
+    
+    // Calculate simple efficiency (Avg Power / Avg HR)
+    function calculateEfficiency(avgPower, avgHR) {
+        if (!avgHR || avgHR === 0) return null;
+        return avgPower / avgHR;
+    }
+    
+    // Calculate Normalized Power (NP)
+    // NP accounts for variability - hard surges cost more than steady effort
+    function calculateNormalizedPower(streams) {
+        if (!streams || !streams.watts) return null;
+        const watts = streams.watts;
+        if (watts.length < 30) return null;
+        
+        // Step 1: Calculate 30-second rolling average
+        const rollingAvg = [];
+        for (let i = 29; i < watts.length; i++) {
+            let sum = 0;
+            for (let j = i - 29; j <= i; j++) {
+                sum += watts[j];
+            }
+            rollingAvg.push(sum / 30);
+        }
+        
+        // Step 2: Raise each value to the 4th power
+        const fourthPowers = rollingAvg.map(p => Math.pow(p, 4));
+        
+        // Step 3: Take the average
+        const avgFourthPower = fourthPowers.reduce((a, b) => a + b, 0) / fourthPowers.length;
+        
+        // Step 4: Take the 4th root
+        return Math.pow(avgFourthPower, 0.25);
+    }
+    
+    // Calculate Efficiency Factor (NP / Avg HR) - the proper intervals.icu method
+    function calculateEfficiencyFactor(streams, avgHR) {
+        if (!avgHR || avgHR === 0) return null;
+        const np = calculateNormalizedPower(streams);
+        if (!np) return null;
+        return np / avgHR;
+    }
+    
+    // Estimate VO2max from cycling data
+    // Using a simplified formula based on power-to-weight and HR
+    // VO2max ≈ (Power_avg / Weight) * 10.8 + 7 (adjusted for HR efficiency)
+    // We'll use a relative formula since we don't have weight
+    function estimateVO2max(avgPower, avgHR, maxHR = 190) {
+        if (!avgHR || avgHR === 0) return null;
+        
+        // Percentage of max HR
+        const hrPercent = avgHR / maxHR;
+        
+        // Estimated VO2 at this intensity (% of VO2max ≈ % of HRmax for steady state)
+        // Using ACSM metabolic equation adapted for cycling
+        // VO2 (ml/kg/min) = (Power * 1.8) / weight + 7
+        // Assuming 75kg average, and adjusting for HR relationship
+        const estimatedWeight = 75; // kg assumption
+        const vo2AtIntensity = (avgPower * 10.8 / estimatedWeight) + 7;
+        
+        // Back-calculate VO2max from the intensity
+        // At steady state, %VO2max ≈ (%HRmax - 0.37) / 0.64 (Swain formula)
+        const vo2maxPercent = Math.max(0.5, (hrPercent - 0.37) / 0.64);
+        const estimatedVO2max = vo2AtIntensity / vo2maxPercent;
+        
+        return Math.min(85, Math.max(25, estimatedVO2max)); // Clamp to reasonable range
+    }
+    
+    // Calculate best power efforts (1min, 5min, 20min)
+    function calculateBestEfforts(streams) {
+        if (!streams || !streams.watts) return { best1min: null, best5min: null, best20min: null };
+        const watts = streams.watts;
+        
+        function bestAverage(data, windowSeconds) {
+            if (data.length < windowSeconds) return null;
+            let maxAvg = 0;
+            let sum = 0;
+            
+            // Initial window
+            for (let i = 0; i < windowSeconds; i++) {
+                sum += data[i];
+            }
+            maxAvg = sum / windowSeconds;
+            
+            // Sliding window
+            for (let i = windowSeconds; i < data.length; i++) {
+                sum = sum - data[i - windowSeconds] + data[i];
+                maxAvg = Math.max(maxAvg, sum / windowSeconds);
+            }
+            return maxAvg;
+        }
+        
+        return {
+            best1min: bestAverage(watts, 60),
+            best5min: bestAverage(watts, 300),
+            best20min: bestAverage(watts, 1200)
+        };
+    }
+    
+    // Calculate time in power zones (based on % of estimated FTP)
+    function calculateZoneDistribution(streams, ftp = 200) {
+        if (!streams || !streams.watts) return null;
+        const watts = streams.watts;
+        
+        // Zone definitions (% of FTP)
+        const zones = [
+            { name: 'Z1 Recovery', min: 0, max: 0.55, color: '#95a5a6', time: 0 },
+            { name: 'Z2 Endurance', min: 0.55, max: 0.75, color: '#3498db', time: 0 },
+            { name: 'Z3 Tempo', min: 0.75, max: 0.90, color: '#2ecc71', time: 0 },
+            { name: 'Z4 Threshold', min: 0.90, max: 1.05, color: '#f39c12', time: 0 },
+            { name: 'Z5 VO2max', min: 1.05, max: 1.20, color: '#e74c3c', time: 0 },
+            { name: 'Z6 Anaerobic', min: 1.20, max: Infinity, color: '#9b59b6', time: 0 }
+        ];
+        
+        watts.forEach(w => {
+            const pctFtp = w / ftp;
+            for (const zone of zones) {
+                if (pctFtp >= zone.min && pctFtp < zone.max) {
+                    zone.time++;
+                    break;
+                }
+            }
+        });
+        
+        const total = watts.length;
+        return zones.map(z => ({ ...z, percent: (z.time / total) * 100 }));
+    }
+    
+    // Calculate weekly training volume
+    function calculateWeeklyVolume(activities) {
+        const weeks = {};
+        activities.forEach(a => {
+            const date = new Date(a.start_date);
+            // Get Monday of that week
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(date.setDate(diff));
+            const weekKey = monday.toISOString().split('T')[0];
+            
+            if (!weeks[weekKey]) {
+                weeks[weekKey] = { hours: 0, distance: 0, tss: 0, count: 0 };
+            }
+            weeks[weekKey].hours += (a.moving_time || 0) / 3600;
+            weeks[weekKey].distance += (a.distance || 0) / 1000;
+            weeks[weekKey].count++;
+            // Simplified TSS estimate: (duration in hours) * (NP/FTP)^2 * 100
+            if (a.normalizedPower) {
+                const ftp = 200; // Estimate
+                const intensityFactor = a.normalizedPower / ftp;
+                weeks[weekKey].tss += (a.moving_time / 3600) * Math.pow(intensityFactor, 2) * 100;
+            }
+        });
+        return Object.entries(weeks).map(([week, data]) => ({ week, ...data })).sort((a, b) => a.week.localeCompare(b.week));
+    }
+    
+    // Calculate aerobic decoupling
+    function calculateDecoupling(streams) {
+        if (!streams || !streams.watts || !streams.heartrate) return null;
+        
+        const watts = streams.watts;
+        const hr = streams.heartrate;
+        const len = watts.length;
+        
+        if (len < 600) return null; // Need at least 10 minutes
+        
+        const mid = Math.floor(len / 2);
+        
+        // First half averages
+        const firstHalfPower = watts.slice(0, mid).reduce((a, b) => a + b, 0) / mid;
+        const firstHalfHR = hr.slice(0, mid).reduce((a, b) => a + b, 0) / mid;
+        
+        // Second half averages
+        const secondHalfPower = watts.slice(mid).reduce((a, b) => a + b, 0) / (len - mid);
+        const secondHalfHR = hr.slice(mid).reduce((a, b) => a + b, 0) / (len - mid);
+        
+        if (firstHalfHR === 0 || firstHalfPower === 0) return null;
+        
+        // Efficiency ratio
+        const firstHalfEfficiency = firstHalfPower / firstHalfHR;
+        const secondHalfEfficiency = secondHalfPower / secondHalfHR;
+        
+        // Decoupling percentage (how much efficiency dropped)
+        const decoupling = ((firstHalfEfficiency - secondHalfEfficiency) / firstHalfEfficiency) * 100;
+        
+        return decoupling;
+    }
+    
+    async function loadAllActivities() {
+        try {
+            // Load index
+            const indexResponse = await fetch('data/index.json');
+            const index = await indexResponse.json();
+            
+            // Load all activity details for deeper analysis
+            const activities = [];
+            
+            for (const summary of index.activities) {
+                try {
+                    const response = await fetch(`data/activities/${summary.id}.json`);
+                    const activity = await response.json();
+                    
+                    const efficiency = calculateEfficiency(summary.average_watts, summary.average_heartrate);
+                    const efficiencyFactor = calculateEfficiencyFactor(activity.streams, summary.average_heartrate);
+                    const normalizedPower = calculateNormalizedPower(activity.streams);
+                    const vo2max = estimateVO2max(summary.average_watts, summary.average_heartrate);
+                    const decoupling = calculateDecoupling(activity.streams);
+                    const bestEfforts = calculateBestEfforts(activity.streams);
+                    
+                    activities.push({
+                        ...summary,
+                        streams: activity.streams,
+                        efficiency,
+                        efficiencyFactor,
+                        normalizedPower,
+                        vo2max,
+                        decoupling,
+                        ...bestEfforts
+                    });
+                } catch (e) {
+                    console.warn(`Could not load activity ${summary.id}`, e);
+                }
+            }
+            
+            // Sort by date (oldest first for trend analysis)
+            allActivities = activities.sort((a, b) => 
+                new Date(a.start_date) - new Date(b.start_date)
+            );
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            
+            renderDashboard();
+            
+        } catch (error) {
+            document.getElementById('loading').innerHTML = 
+                '⚠️ No data found.<br><small>Run <code>cargo run</code> first!</small>';
+            console.error('Error:', error);
+        }
+    }
+    
+    function renderDashboard() {
+        renderOverviewStats();
+        createTimeSeriesChart('efficiency-chart', 'efficiency', '#00d4ff', 'W/bpm', 2);
+        createTimeSeriesChart('ef-chart', 'efficiencyFactor', '#ff9f43', 'W/bpm', 2);
+        createTimeSeriesChart('vo2max-chart', 'vo2max', '#2ecc71', 'ml/kg/min', 1);
+        createTimeSeriesChart('power-chart', 'average_watts', '#f39c12', 'W', 0);
+        createTimeSeriesChart('hr-chart', 'average_heartrate', '#ff6b6b', 'bpm', 0);
+        createTimeSeriesChart('decoupling-chart', 'decoupling', '#9b59b6', '%', 1, true);
+        createBestEffortsChart();
+        createWeeklyVolumeChart();
+        createZoneSummaryChart();
+        renderActivityTable();
+    }
+    
+    function renderOverviewStats() {
+        const recent = allActivities.slice(-10);
+        const older = allActivities.slice(0, -10);
+        
+        const avgEfficiencyRecent = recent.filter(a => a.efficiency).reduce((sum, a) => sum + a.efficiency, 0) / recent.filter(a => a.efficiency).length;
+        const avgEfficiencyOlder = older.length ? older.filter(a => a.efficiency).reduce((sum, a) => sum + a.efficiency, 0) / older.filter(a => a.efficiency).length : avgEfficiencyRecent;
+        const efficiencyChange = ((avgEfficiencyRecent - avgEfficiencyOlder) / avgEfficiencyOlder * 100);
+        
+        const avgVO2Recent = recent.filter(a => a.vo2max).reduce((sum, a) => sum + a.vo2max, 0) / recent.filter(a => a.vo2max).length;
+        const avgVO2Older = older.length ? older.filter(a => a.vo2max).reduce((sum, a) => sum + a.vo2max, 0) / older.filter(a => a.vo2max).length : avgVO2Recent;
+        const vo2Change = ((avgVO2Recent - avgVO2Older) / avgVO2Older * 100);
+        
+        const totalDistance = allActivities.reduce((sum, a) => sum + (a.distance || 0), 0) / 1000;
+        const totalTime = allActivities.reduce((sum, a) => sum + (a.moving_time || 0), 0) / 3600;
+        
+        const avgDecouplingRecent = recent.filter(a => a.decoupling !== null).reduce((sum, a) => sum + a.decoupling, 0) / recent.filter(a => a.decoupling !== null).length;
+        
+        const stats = [
+            {
+                title: 'Total Activities',
+                value: allActivities.length,
+                trend: null
+            },
+            {
+                title: 'Total Distance',
+                value: `${totalDistance.toFixed(0)} km`,
+                trend: null
+            },
+            {
+                title: 'Total Time',
+                value: `${totalTime.toFixed(0)} hrs`,
+                trend: null
+            },
+            {
+                title: 'Avg Efficiency (Recent)',
+                value: `${avgEfficiencyRecent.toFixed(2)} W/bpm`,
+                trend: efficiencyChange,
+                goodUp: true
+            },
+            {
+                title: 'Est. VO2max (Recent)',
+                value: `${avgVO2Recent.toFixed(1)}`,
+                trend: vo2Change,
+                goodUp: true
+            },
+            {
+                title: 'Avg Decoupling (Recent)',
+                value: `${avgDecouplingRecent.toFixed(1)}%`,
+                trend: null,
+                note: avgDecouplingRecent < 5 ? 'Excellent' : avgDecouplingRecent < 10 ? 'Good' : 'Needs work'
+            }
+        ];
+        
+        document.getElementById('overview-stats').innerHTML = stats.map(stat => {
+            let trendHtml = '';
+            if (stat.trend !== null && !isNaN(stat.trend)) {
+                const isGood = stat.goodUp ? stat.trend > 0 : stat.trend < 0;
+                const trendClass = Math.abs(stat.trend) < 1 ? 'neutral' : (isGood ? 'up' : 'down');
+                const arrow = stat.trend > 0 ? '↑' : stat.trend < 0 ? '↓' : '→';
+                trendHtml = `<div class="trend ${trendClass}">${arrow} ${Math.abs(stat.trend).toFixed(1)}% vs earlier</div>`;
+            } else if (stat.note) {
+                trendHtml = `<div class="trend neutral">${stat.note}</div>`;
+            }
+            
+            return `
+                <div class="stat-card">
+                    <h3>${stat.title}</h3>
+                    <div class="value">${stat.value}</div>
+                    ${trendHtml}
+                </div>
+            `;
+        }).join('');
+    }
+    
+    function createTimeSeriesChart(containerId, metric, color, unit, decimals, lowerIsBetter = false) {
+        const container = d3.select(`#${containerId}`);
+        const data = allActivities.filter(a => a[metric] !== null && a[metric] !== undefined);
+        
+        if (data.length === 0) {
+            container.append('text')
+                .attr('x', 200)
+                .attr('y', 100)
+                .attr('fill', '#888')
+                .text('No data available');
+            return;
+        }
+        
+        const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+        const width = container.node().parentElement.clientWidth - margin.left - margin.right - 50;
+        const height = 250 - margin.top - margin.bottom;
+        
+        container.attr('height', height + margin.top + margin.bottom);
+        
+        const svg = container.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        const x = d3.scaleTime()
+            .domain(d3.extent(data, d => new Date(d.start_date)))
+            .range([0, width]);
+        
+        const yExtent = d3.extent(data, d => d[metric]);
+        const yPadding = (yExtent[1] - yExtent[0]) * 0.1;
+        
+        const y = d3.scaleLinear()
+            .domain([yExtent[0] - yPadding, yExtent[1] + yPadding])
+            .range([height, 0]);
+        
+        // Grid
+        svg.append('g')
+            .attr('class', 'grid')
+            .call(d3.axisLeft(y)
+                .tickSize(-width)
+                .tickFormat('')
+            );
+        
+        // Axes
+        svg.append('g')
+            .attr('class', 'axis')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x).tickFormat(d3.timeFormat('%b %d')));
+        
+        svg.append('g')
+            .attr('class', 'axis')
+            .call(d3.axisLeft(y));
+        
+        // Y axis label
+        svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('y', -45)
+            .attr('x', -height / 2)
+            .attr('fill', '#888')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px')
+            .text(unit);
+        
+        // Trend line (linear regression)
+        const xMean = d3.mean(data, d => new Date(d.start_date).getTime());
+        const yMean = d3.mean(data, d => d[metric]);
+        
+        let numerator = 0;
+        let denominator = 0;
+        data.forEach(d => {
+            const xVal = new Date(d.start_date).getTime();
+            numerator += (xVal - xMean) * (d[metric] - yMean);
+            denominator += (xVal - xMean) ** 2;
+        });
+        const slope = numerator / denominator;
+        const intercept = yMean - slope * xMean;
+        
+        const trendData = [
+            { x: d3.min(data, d => new Date(d.start_date)), y: slope * d3.min(data, d => new Date(d.start_date).getTime()) + intercept },
+            { x: d3.max(data, d => new Date(d.start_date)), y: slope * d3.max(data, d => new Date(d.start_date).getTime()) + intercept }
+        ];
+        
+        svg.append('line')
+            .attr('class', 'trend-line')
+            .attr('x1', x(trendData[0].x))
+            .attr('y1', y(trendData[0].y))
+            .attr('x2', x(trendData[1].x))
+            .attr('y2', y(trendData[1].y))
+            .attr('stroke', color);
+        
+        // Line
+        const line = d3.line()
+            .x(d => x(new Date(d.start_date)))
+            .y(d => y(d[metric]))
+            .curve(d3.curveMonotoneX);
+        
+        svg.append('path')
+            .datum(data)
+            .attr('fill', 'none')
+            .attr('stroke', color)
+            .attr('stroke-width', 2)
+            .attr('opacity', 0.7)
+            .attr('d', line);
+        
+        // Points
+        svg.selectAll('.data-point')
+            .data(data)
+            .enter()
+            .append('circle')
+            .attr('class', 'data-point')
+            .attr('cx', d => x(new Date(d.start_date)))
+            .attr('cy', d => y(d[metric]))
+            .attr('r', 5)
+            .attr('fill', color)
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 1)
+            .on('mouseover', function(event, d) {
+                d3.select(this).attr('r', 8);
+                const date = new Date(d.start_date).toLocaleDateString('en-US', { 
+                    weekday: 'short', month: 'short', day: 'numeric' 
+                });
+                showTooltip(`
+                    <div class="tooltip-title">${d.name.replace('Zwift - ', '')}</div>
+                    <div class="tooltip-row"><span class="tooltip-label">Date:</span><span class="tooltip-value">${date}</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label">${metric === 'efficiency' ? 'Efficiency' : metric === 'efficiencyFactor' ? 'Efficiency Factor' : metric === 'vo2max' ? 'Est. VO2max' : metric === 'decoupling' ? 'Decoupling' : metric === 'average_watts' ? 'Avg Power' : 'Avg HR'}:</span><span class="tooltip-value" style="color: ${color}">${d[metric].toFixed(decimals)} ${unit}</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label">Duration:</span><span class="tooltip-value">${Math.floor(d.moving_time / 60)} min</span></div>
+                `, event);
+            })
+            .on('mouseout', function() {
+                d3.select(this).attr('r', 5);
+                hideTooltip();
+            })
+            .on('click', (event, d) => {
+                window.location.href = `activity.html?id=${d.id}`;
+            });
+        
+        // Trend indicator
+        const trendChange = trendData[1].y - trendData[0].y;
+        const trendPercent = (trendChange / trendData[0].y * 100);
+        const improving = lowerIsBetter ? trendChange < 0 : trendChange > 0;
+        
+        // Calculate time span
+        const firstDate = d3.min(data, d => new Date(d.start_date));
+        const lastDate = d3.max(data, d => new Date(d.start_date));
+        const daysDiff = Math.round((lastDate - firstDate) / (1000 * 60 * 60 * 24));
+        const weeksSpan = Math.round(daysDiff / 7);
+        const timeSpan = weeksSpan > 8 ? `${Math.round(daysDiff / 30)} months` : `${weeksSpan} weeks`;
+        
+        svg.append('text')
+            .attr('x', width - 10)
+            .attr('y', 15)
+            .attr('text-anchor', 'end')
+            .attr('fill', improving ? '#2ecc71' : '#ff6b6b')
+            .attr('font-size', '12px')
+            .text(`Trend: ${trendChange > 0 ? '+' : ''}${trendPercent.toFixed(1)}% over ${timeSpan}`);
+    }
+    
+    function createBestEffortsChart() {
+        const container = d3.select('#best-efforts-chart');
+        const data = allActivities.filter(a => a.best1min && a.best5min && a.best20min);
+        
+        if (data.length === 0) return;
+        
+        const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+        const width = container.node().parentElement.clientWidth - margin.left - margin.right - 50;
+        const height = 280 - margin.top - margin.bottom;
+        
+        container.attr('height', height + margin.top + margin.bottom);
+        
+        const svg = container.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        const x = d3.scaleTime()
+            .domain(d3.extent(data, d => new Date(d.start_date)))
+            .range([0, width]);
+        
+        const allPowers = data.flatMap(d => [d.best1min, d.best5min, d.best20min]);
+        const y = d3.scaleLinear()
+            .domain([d3.min(allPowers) * 0.9, d3.max(allPowers) * 1.05])
+            .range([height, 0]);
+        
+        // Grid
+        svg.append('g')
+            .attr('class', 'grid')
+            .call(d3.axisLeft(y).tickSize(-width).tickFormat(''));
+        
+        // Axes
+        svg.append('g')
+            .attr('class', 'axis')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x).tickFormat(d3.timeFormat('%b %d')));
+        
+        svg.append('g')
+            .attr('class', 'axis')
+            .call(d3.axisLeft(y));
+        
+        svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('y', -45)
+            .attr('x', -height / 2)
+            .attr('fill', '#888')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px')
+            .text('Watts');
+        
+        // Lines and points for each duration
+        const metrics = [
+            { key: 'best1min', color: '#e74c3c', label: '1 min' },
+            { key: 'best5min', color: '#f39c12', label: '5 min' },
+            { key: 'best20min', color: '#2ecc71', label: '20 min' }
+        ];
+        
+        metrics.forEach(metric => {
+            const line = d3.line()
+                .x(d => x(new Date(d.start_date)))
+                .y(d => y(d[metric.key]))
+                .curve(d3.curveMonotoneX);
+            
+            svg.append('path')
+                .datum(data)
+                .attr('fill', 'none')
+                .attr('stroke', metric.color)
+                .attr('stroke-width', 2)
+                .attr('opacity', 0.7)
+                .attr('d', line);
+            
+            svg.selectAll(`.point-${metric.key}`)
+                .data(data)
+                .enter()
+                .append('circle')
+                .attr('class', `data-point point-${metric.key}`)
+                .attr('cx', d => x(new Date(d.start_date)))
+                .attr('cy', d => y(d[metric.key]))
+                .attr('r', 4)
+                .attr('fill', metric.color)
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 1)
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('r', 7);
+                    showTooltip(`
+                        <div class="tooltip-title">${d.name.replace('Zwift - ', '')}</div>
+                        <div class="tooltip-row"><span class="tooltip-label">Best ${metric.label}:</span><span class="tooltip-value" style="color: ${metric.color}">${d[metric.key].toFixed(0)} W</span></div>
+                    `, event);
+                })
+                .on('mouseout', function() {
+                    d3.select(this).attr('r', 4);
+                    hideTooltip();
+                });
+        });
+        
+        // Show best all-time PRs
+        const best1 = d3.max(data, d => d.best1min);
+        const best5 = d3.max(data, d => d.best5min);
+        const best20 = d3.max(data, d => d.best20min);
+        
+        svg.append('text')
+            .attr('x', width - 10)
+            .attr('y', 15)
+            .attr('text-anchor', 'end')
+            .attr('fill', '#888')
+            .attr('font-size', '11px')
+            .text(`PRs: 1min=${best1.toFixed(0)}W | 5min=${best5.toFixed(0)}W | 20min=${best20.toFixed(0)}W`);
+    }
+    
+    function createWeeklyVolumeChart() {
+        const weeklyData = calculateWeeklyVolume(allActivities);
+        const container = d3.select('#weekly-volume-chart');
+        
+        if (weeklyData.length === 0) return;
+        
+        const margin = { top: 20, right: 60, bottom: 50, left: 60 };
+        const width = container.node().parentElement.clientWidth - margin.left - margin.right - 50;
+        const height = 250 - margin.top - margin.bottom;
+        
+        container.attr('height', height + margin.top + margin.bottom);
+        
+        const svg = container.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        const x = d3.scaleBand()
+            .domain(weeklyData.map(d => d.week))
+            .range([0, width])
+            .padding(0.2);
+        
+        const yHours = d3.scaleLinear()
+            .domain([0, d3.max(weeklyData, d => d.hours) * 1.1])
+            .range([height, 0]);
+        
+        const yTss = d3.scaleLinear()
+            .domain([0, d3.max(weeklyData, d => d.tss) * 1.1])
+            .range([height, 0]);
+        
+        // Axes
+        svg.append('g')
+            .attr('class', 'axis')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x).tickFormat(d => {
+                const date = new Date(d);
+                return d3.timeFormat('%b %d')(date);
+            }))
+            .selectAll('text')
+            .attr('transform', 'rotate(-45)')
+            .style('text-anchor', 'end');
+        
+        svg.append('g')
+            .attr('class', 'axis')
+            .call(d3.axisLeft(yHours).ticks(5));
+        
+        svg.append('g')
+            .attr('class', 'axis')
+            .attr('transform', `translate(${width}, 0)`)
+            .call(d3.axisRight(yTss).ticks(5));
+        
+        // Y axis labels
+        svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('y', -45)
+            .attr('x', -height / 2)
+            .attr('fill', '#3498db')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px')
+            .text('Hours');
+        
+        svg.append('text')
+            .attr('transform', 'rotate(90)')
+            .attr('y', -width - 45)
+            .attr('x', height / 2)
+            .attr('fill', '#e74c3c')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px')
+            .text('TSS');
+        
+        // Bars for hours
+        svg.selectAll('.bar-hours')
+            .data(weeklyData)
+            .enter()
+            .append('rect')
+            .attr('class', 'bar-hours')
+            .attr('x', d => x(d.week))
+            .attr('y', d => yHours(d.hours))
+            .attr('width', x.bandwidth() / 2)
+            .attr('height', d => height - yHours(d.hours))
+            .attr('fill', '#3498db')
+            .attr('opacity', 0.8)
+            .on('mouseover', function(event, d) {
+                showTooltip(`
+                    <div class="tooltip-title">Week of ${new Date(d.week).toLocaleDateString()}</div>
+                    <div class="tooltip-row"><span class="tooltip-label">Rides:</span><span class="tooltip-value">${d.count}</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label">Hours:</span><span class="tooltip-value" style="color: #3498db">${d.hours.toFixed(1)}</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label">Distance:</span><span class="tooltip-value">${d.distance.toFixed(0)} km</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label">TSS:</span><span class="tooltip-value" style="color: #e74c3c">${d.tss.toFixed(0)}</span></div>
+                `, event);
+            })
+            .on('mouseout', hideTooltip);
+        
+        // Bars for TSS
+        svg.selectAll('.bar-tss')
+            .data(weeklyData)
+            .enter()
+            .append('rect')
+            .attr('class', 'bar-tss')
+            .attr('x', d => x(d.week) + x.bandwidth() / 2)
+            .attr('y', d => yTss(d.tss))
+            .attr('width', x.bandwidth() / 2)
+            .attr('height', d => height - yTss(d.tss))
+            .attr('fill', '#e74c3c')
+            .attr('opacity', 0.8);
+    }
+    
+    function createZoneSummaryChart() {
+        // Aggregate all power data across activities
+        const allWatts = allActivities.flatMap(a => a.streams?.watts || []);
+        if (allWatts.length === 0) return;
+        
+        // Estimate FTP from best 20min power
+        const best20minAll = d3.max(allActivities, a => a.best20min) || 200;
+        const estimatedFTP = best20minAll * 0.95;
+        
+        const zones = [
+            { name: 'Z1 Recovery', min: 0, max: 0.55, color: '#95a5a6', time: 0 },
+            { name: 'Z2 Endurance', min: 0.55, max: 0.75, color: '#3498db', time: 0 },
+            { name: 'Z3 Tempo', min: 0.75, max: 0.90, color: '#2ecc71', time: 0 },
+            { name: 'Z4 Threshold', min: 0.90, max: 1.05, color: '#f39c12', time: 0 },
+            { name: 'Z5 VO2max', min: 1.05, max: 1.20, color: '#e74c3c', time: 0 },
+            { name: 'Z6 Anaerobic', min: 1.20, max: Infinity, color: '#9b59b6', time: 0 }
+        ];
+        
+        allWatts.forEach(w => {
+            const pctFtp = w / estimatedFTP;
+            for (const zone of zones) {
+                if (pctFtp >= zone.min && pctFtp < zone.max) {
+                    zone.time++;
+                    break;
+                }
+            }
+        });
+        
+        const total = allWatts.length;
+        zones.forEach(z => z.percent = (z.time / total) * 100);
+        
+        const container = d3.select('#zone-summary-chart');
+        const margin = { top: 20, right: 120, bottom: 30, left: 120 };
+        const width = container.node().parentElement.clientWidth - margin.left - margin.right - 50;
+        const height = 200 - margin.top - margin.bottom;
+        
+        container.attr('height', height + margin.top + margin.bottom);
+        
+        const svg = container.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        const y = d3.scaleBand()
+            .domain(zones.map(z => z.name))
+            .range([0, height])
+            .padding(0.2);
+        
+        const x = d3.scaleLinear()
+            .domain([0, d3.max(zones, z => z.percent) * 1.1])
+            .range([0, width]);
+        
+        // Grid
+        svg.append('g')
+            .attr('class', 'grid')
+            .call(d3.axisBottom(x).tickSize(height).tickFormat(''));
+        
+        // Bars
+        svg.selectAll('.zone-bar')
+            .data(zones)
+            .enter()
+            .append('rect')
+            .attr('class', 'zone-bar')
+            .attr('y', d => y(d.name))
+            .attr('x', 0)
+            .attr('height', y.bandwidth())
+            .attr('width', d => x(d.percent))
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.85);
+        
+        // Labels
+        svg.selectAll('.zone-label')
+            .data(zones)
+            .enter()
+            .append('text')
+            .attr('y', d => y(d.name) + y.bandwidth() / 2)
+            .attr('x', -10)
+            .attr('dy', '0.35em')
+            .attr('text-anchor', 'end')
+            .attr('fill', '#aaa')
+            .attr('font-size', '11px')
+            .text(d => d.name);
+        
+        // Percentages
+        svg.selectAll('.zone-percent')
+            .data(zones)
+            .enter()
+            .append('text')
+            .attr('y', d => y(d.name) + y.bandwidth() / 2)
+            .attr('x', d => x(d.percent) + 5)
+            .attr('dy', '0.35em')
+            .attr('fill', '#fff')
+            .attr('font-size', '12px')
+            .attr('font-weight', 'bold')
+            .text(d => `${d.percent.toFixed(1)}%`);
+        
+        // Add recommendation
+        const z2Percent = zones[1].percent;
+        const z3Percent = zones[2].percent;
+        let advice = '';
+        if (z2Percent < 50) {
+            advice = '💡 Consider more Z2 (endurance) rides for base building';
+        } else if (z3Percent > 25) {
+            advice = '⚠️ Lots of Z3 "grey zone" - try polarizing: more Z2 or more Z4+';
+        } else {
+            advice = '✅ Good zone distribution!';
+        }
+        
+        svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height + 25)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#888')
+            .attr('font-size', '11px')
+            .text(`Est. FTP: ${estimatedFTP.toFixed(0)}W | ${advice}`);
+    }
+    
+    function renderActivityTable() {
+        const recentActivities = [...allActivities].reverse().slice(0, 15);
+        
+        const tbody = document.getElementById('activity-tbody');
+        tbody.innerHTML = recentActivities.map(a => {
+            const date = new Date(a.start_date).toLocaleDateString('en-US', { 
+                month: 'short', day: 'numeric' 
+            });
+            const duration = `${Math.floor(a.moving_time / 60)}min`;
+            const name = a.name.replace('Zwift - ', '').substring(0, 40);
+            
+            return `
+                <tr>
+                    <td class="date">${date}</td>
+                    <td class="name" title="${a.name}">${name}</td>
+                    <td class="metric">${duration}</td>
+                    <td class="metric">${a.average_watts?.toFixed(0) || '-'} W</td>
+                    <td class="metric">${a.normalizedPower?.toFixed(0) || '-'} W</td>
+                    <td class="metric">${a.average_heartrate?.toFixed(0) || '-'}</td>
+                    <td class="metric ${a.efficiencyFactor > 1.0 ? 'good' : ''}">${a.efficiencyFactor?.toFixed(2) || '-'}</td>
+                    <td><a href="activity.html?id=${a.id}" class="view-link">View →</a></td>
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    // Initialize
+    loadAllActivities();
+    </script>
+</body>
+</html>

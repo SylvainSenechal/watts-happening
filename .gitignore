@@ -1,0 +1,31 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Environment & Secrets
+.env
+*.pem
+*.key
+secrets/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Generated data
+data/*.json
+!data/.gitkeep
+
+# Node modules (if we add any tooling later)
+node_modules/
+
+
+# Added by cargo
+
+/target
