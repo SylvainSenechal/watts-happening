@@ -1,4 +1,4 @@
-# Watts Happening? ⚡🚴
+# Watts Happening?
 
 Personal cycling performance analytics dashboard with interactive visualizations.
 
