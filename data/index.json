@@ -1,6 +1,15 @@
 {
-  "last_updated": "2026-02-01T05:05:38.567177854+00:00",
+  "last_updated": "2026-02-02T05:02:31.940189113+00:00",
   "activities": [
+    {
+      "id": 17252211893,
+      "name": "Zwift - New Workout on London 8 in London",
+      "start_date": "2026-02-01T15:38:51Z",
+      "distance": 27489.4,
+      "moving_time": 3621,
+      "average_watts": 142.8,
+      "average_heartrate": 150.5
+    },
     {
       "id": 17210440750,
       "name": "Zwift - New Workout on The Fan Flats in Richmond",
