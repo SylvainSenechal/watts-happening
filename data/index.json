@@ -1,6 +1,15 @@
 {
-  "last_updated": "2026-02-07T04:42:02.826011768+00:00",
+  "last_updated": "2026-02-08T05:08:03.506613580+00:00",
   "activities": [
+    {
+      "id": 17320428951,
+      "name": "Zwift - 1h30 on Figure 8 in Watopia",
+      "start_date": "2026-02-07T16:46:29Z",
+      "distance": 44293.7,
+      "moving_time": 5423,
+      "average_watts": 137.2,
+      "average_heartrate": 149.0
+    },
     {
       "id": 17286987344,
       "name": "Zwift - recup 45 min on Volcano Circuit in Watopia",
