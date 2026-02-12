@@ -1,6 +1,15 @@
 {
-  "last_updated": "2026-02-11T05:07:20.481584732+00:00",
+  "last_updated": "2026-02-12T05:03:19.347932453+00:00",
   "activities": [
+    {
+      "id": 17366393179,
+      "name": "Zwift - Anaerobic Hammer Session on Two Bridges Loop in Watopia",
+      "start_date": "2026-02-11T19:25:14Z",
+      "distance": 20181.7,
+      "moving_time": 2721,
+      "average_watts": 131.0,
+      "average_heartrate": 148.8
+    },
     {
       "id": 17320428951,
       "name": "Zwift - 1h30 on Figure 8 in Watopia",
