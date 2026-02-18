@@ -1,6 +1,15 @@
 {
-  "last_updated": "2026-02-17T04:57:35.546749105+00:00",
+  "last_updated": "2026-02-18T04:58:44.630492595+00:00",
   "activities": [
+    {
+      "id": 17431459415,
+      "name": "Zwift - recup 45 min on Queen's Highway in Yorkshire",
+      "start_date": "2026-02-17T18:44:16Z",
+      "distance": 20359.0,
+      "moving_time": 2710,
+      "average_watts": 134.3,
+      "average_heartrate": 141.8
+    },
     {
       "id": 17366393179,
       "name": "Zwift - Anaerobic Hammer Session on Two Bridges Loop in Watopia",
