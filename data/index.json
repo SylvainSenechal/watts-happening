@@ -1,6 +1,15 @@
 {
-  "last_updated": "2026-02-19T04:57:56.063831176+00:00",
+  "last_updated": "2026-02-20T04:51:33.397642618+00:00",
   "activities": [
+    {
+      "id": 17454113473,
+      "name": "Zwift - recup 45 min on Suki's Playground in Makuri Islands",
+      "start_date": "2026-02-19T19:23:36Z",
+      "distance": 21646.5,
+      "moving_time": 2725,
+      "average_watts": 133.4,
+      "average_heartrate": 134.0
+    },
     {
       "id": 17431459415,
       "name": "Zwift - recup 45 min on Queen's Highway in Yorkshire",
