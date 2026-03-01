@@ -1,6 +1,15 @@
 {
-  "last_updated": "2026-02-28T04:18:53.986661494+00:00",
+  "last_updated": "2026-03-01T04:58:58.308179846+00:00",
   "activities": [
+    {
+      "id": 17558890364,
+      "name": "Zwift - 1h30",
+      "start_date": "2026-02-28T22:53:32Z",
+      "distance": 29420.5,
+      "moving_time": 5408,
+      "average_watts": 137.6,
+      "average_heartrate": 151.0
+    },
     {
       "id": 17510597918,
       "name": "Zwift - recup 45 min on 2019 Worlds Harrogate Circuit in Yorkshire",
