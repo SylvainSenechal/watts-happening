@@ -1,6 +1,15 @@
 {
-  "last_updated": "2026-03-17T04:57:13.063804367+00:00",
+  "last_updated": "2026-03-18T05:01:54.774922993+00:00",
   "activities": [
+    {
+      "id": 17758041414,
+      "name": "Zwift - Hairpin Wizard",
+      "start_date": "2026-03-17T18:18:07Z",
+      "distance": 19874.8,
+      "moving_time": 2657,
+      "average_watts": 140.8,
+      "average_heartrate": 143.3
+    },
     {
       "id": 17723682428,
       "name": "Zwift - Hairpin Wizard",
