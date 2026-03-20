@@ -443,10 +443,25 @@
         return avgPower / avgHR;
     }
     
+    // Trim trailing zeros from streams (e.g. coasting to a stop at end of ride)
+    function trimTrailingZeros(streams) {
+        if (!streams || !streams.watts) return streams;
+        const watts = streams.watts;
+        let end = watts.length - 1;
+        while (end > 0 && watts[end] === 0) end--;
+        if (end === watts.length - 1) return streams; // nothing to trim
+        const trimmed = {};
+        for (const key of Object.keys(streams)) {
+            trimmed[key] = Array.isArray(streams[key]) ? streams[key].slice(0, end + 1) : streams[key];
+        }
+        return trimmed;
+    }
+
     // Calculate Normalized Power (NP)
     // NP accounts for variability - hard surges cost more than steady effort
     function calculateNormalizedPower(streams) {
         if (!streams || !streams.watts) return null;
+        streams = trimTrailingZeros(streams);
         const watts = streams.watts;
         if (watts.length < 30) return null;
         
@@ -506,6 +521,7 @@
     // Calculate best power efforts (1min, 5min, 20min)
     function calculateBestEfforts(streams) {
         if (!streams || !streams.watts) return { best1min: null, best5min: null, best20min: null };
+        streams = trimTrailingZeros(streams);
         const watts = streams.watts;
         
         function bestAverage(data, windowSeconds) {
@@ -537,6 +553,7 @@
     // Calculate time in power zones (based on % of estimated FTP)
     function calculateZoneDistribution(streams, ftp = 200) {
         if (!streams || !streams.watts) return null;
+        streams = trimTrailingZeros(streams);
         const watts = streams.watts;
         
         // Zone definitions (% of FTP)
@@ -593,7 +610,7 @@
     // Calculate aerobic decoupling
     function calculateDecoupling(streams) {
         if (!streams || !streams.watts || !streams.heartrate) return null;
-        
+        streams = trimTrailingZeros(streams);
         const watts = streams.watts;
         const hr = streams.heartrate;
         const len = watts.length;
