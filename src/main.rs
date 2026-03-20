@@ -89,20 +89,32 @@ struct ActivitySummary {
     normalized_power: Option<f64>,
     efficiency_factor: Option<f64>,
     decoupling: Option<f64>,
+    best_5s: Option<f64>,
+    best_30s: Option<f64>,
     best_1min: Option<f64>,
+    best_2min: Option<f64>,
     best_5min: Option<f64>,
+    best_10min: Option<f64>,
     best_20min: Option<f64>,
+    best_60min: Option<f64>,
     zone_seconds: Option<[i32; 6]>,
+    hr_recovery: Option<f64>,
 }
 
 struct ActivityMetrics {
     normalized_power: Option<f64>,
     efficiency_factor: Option<f64>,
     decoupling: Option<f64>,
+    best_5s: Option<f64>,
+    best_30s: Option<f64>,
     best_1min: Option<f64>,
+    best_2min: Option<f64>,
     best_5min: Option<f64>,
+    best_10min: Option<f64>,
     best_20min: Option<f64>,
+    best_60min: Option<f64>,
     zone_seconds: Option<[i32; 6]>,
+    hr_recovery: Option<f64>,
 }
 
 fn trim_trailing_zeros(watts: &[f64]) -> &[f64] {
@@ -115,13 +127,10 @@ fn trim_trailing_zeros(watts: &[f64]) -> &[f64] {
 
 fn compute_metrics(streams: &ActivityStreams) -> ActivityMetrics {
     let empty = ActivityMetrics {
-        normalized_power: None,
-        efficiency_factor: None,
-        decoupling: None,
-        best_1min: None,
-        best_5min: None,
-        best_20min: None,
-        zone_seconds: None,
+        normalized_power: None, efficiency_factor: None, decoupling: None,
+        best_5s: None, best_30s: None, best_1min: None, best_2min: None,
+        best_5min: None, best_10min: None, best_20min: None, best_60min: None,
+        zone_seconds: None, hr_recovery: None,
     };
 
     let watts_raw = match &streams.watts {
@@ -184,9 +193,14 @@ fn compute_metrics(streams: &ActivityStreams) -> ActivityMetrics {
         }
         Some(best)
     };
+    let best_5s   = best_average(5);
+    let best_30s  = best_average(30);
     let best_1min = best_average(60);
+    let best_2min = best_average(120);
     let best_5min = best_average(300);
+    let best_10min = best_average(600);
     let best_20min = best_average(1200);
+    let best_60min = best_average(3600);
 
     // --- Zone distribution (% of FTP = 200W estimate) ---
     let ftp = 200.0_f64;
@@ -207,10 +221,27 @@ fn compute_metrics(streams: &ActivityStreams) -> ActivityMetrics {
         normalized_power,
         efficiency_factor,
         decoupling,
+        best_5s,
+        best_30s,
         best_1min,
+        best_2min,
         best_5min,
+        best_10min,
         best_20min,
+        best_60min,
         zone_seconds: Some(zones),
+        hr_recovery: streams.heartrate.as_ref().and_then(|hr_raw| {
+            let hr: Vec<f64> = hr_raw.iter().take(watts.len()).map(|&h| h as f64).collect();
+            let n = hr.len();
+            if n < 120 { return None; }
+            // Peak HR in the last 5 minutes of effort
+            let window = std::cmp::min(300, n);
+            let peak = hr[n-window..n].iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            // Average of last 30 seconds
+            let end_avg = hr[n-30..n].iter().sum::<f64>() / 30.0;
+            let drop = peak - end_avg;
+            if drop > 0.0 { Some(drop) } else { None }
+        }),
     }
 }
 
@@ -255,10 +286,16 @@ impl ActivityIndex {
             normalized_power: metrics.normalized_power,
             efficiency_factor: metrics.efficiency_factor,
             decoupling: metrics.decoupling,
+            best_5s: metrics.best_5s,
+            best_30s: metrics.best_30s,
             best_1min: metrics.best_1min,
+            best_2min: metrics.best_2min,
             best_5min: metrics.best_5min,
+            best_10min: metrics.best_10min,
             best_20min: metrics.best_20min,
+            best_60min: metrics.best_60min,
             zone_seconds: metrics.zone_seconds,
+            hr_recovery: metrics.hr_recovery,
         };
         // Remove existing entry if present, then re-insert
         self.activities.retain(|a| a.id != activity.id);
@@ -420,7 +457,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Some(s) => compute_metrics(s),
             None => ActivityMetrics {
                 normalized_power: None, efficiency_factor: None, decoupling: None,
-                best_1min: None, best_5min: None, best_20min: None, zone_seconds: None,
+                best_5s: None, best_30s: None, best_1min: None, best_2min: None,
+                best_5min: None, best_10min: None, best_20min: None, best_60min: None,
+                zone_seconds: None, hr_recovery: None,
             },
         };
         index.add_activity(&activity_with_streams.activity, metrics);

@@ -350,6 +350,26 @@
                     <svg id="hr-chart"></svg>
                 </div>
             </div>
+
+            <div class="two-columns">
+                <div class="chart-container">
+                    <h2 class="chart-title">🔄 Cadence Trend</h2>
+                    <div class="metric-explanation">
+                        <strong>Cadence</strong> (rpm) — higher cadence = less muscular stress, more cardiovascular.
+                        Most coaches recommend 85-95 rpm for efficiency. A rising trend = better pedaling technique.
+                    </div>
+                    <svg id="cadence-chart"></svg>
+                </div>
+
+                <div class="chart-container">
+                    <h2 class="chart-title">💓 HR Recovery Rate</h2>
+                    <div class="metric-explanation">
+                        <strong>HR drop in the last 2 minutes</strong> of each ride. Higher = faster recovery = better fitness.
+                        Elite athletes drop 30-40+ bpm in 2 min. This is one of the best raw fitness indicators.
+                    </div>
+                    <svg id="hr-recovery-chart"></svg>
+                </div>
+            </div>
             
             <div class="chart-container">
                 <h2 class="chart-title">🔄 Aerobic Decoupling Over Time</h2>
@@ -397,7 +417,71 @@
                 </div>
                 <svg id="zone-summary-chart"></svg>
             </div>
-            
+
+            <div class="chart-container">
+                <h2 class="chart-title">📉 FTP Progression</h2>
+                <div class="metric-explanation">
+                    <strong>Estimated FTP</strong> = Best 20-min power × 0.95. The most important single number in cycling — 
+                    it anchors all your training zones. Watch this climb over months of consistent training!
+                </div>
+                <svg id="ftp-chart"></svg>
+            </div>
+
+            <div class="chart-container">
+                <h2 class="chart-title">⚡ Mean Maximal Power Curve</h2>
+                <div class="metric-explanation">
+                    <strong>Power Curve</strong> shows your all-time best average power for every duration from 5 seconds to 60 minutes.
+                    Left = short explosive power, right = endurance. This is your cycling "fingerprint". 
+                    Gaps below the curve = opportunities to improve.
+                </div>
+                <svg id="mmp-chart"></svg>
+            </div>
+
+            <div class="chart-container">
+                <h2 class="chart-title">💪 Power vs Heart Rate (All Rides)</h2>
+                <div class="metric-explanation">
+                    <strong>Fitness fingerprint</strong> — each dot is one ride. As you get fitter, the cloud shifts <strong>up</strong> 
+                    (more power at the same HR) or <strong>left</strong> (same power at lower HR). 
+                    Dots are colored from older (purple) to newer (yellow) — look for the yellow dots to be higher up than the purple ones!
+                </div>
+                <svg id="power-hr-scatter"></svg>
+            </div>
+
+            <div class="chart-container">
+                <h2 class="chart-title">📊 Performance Management Chart (CTL / ATL / TSB)</h2>
+                <div class="metric-explanation">
+                    <strong>CTL</strong> (Chronic Training Load, blue) = fitness, 42-day EMA of daily TSS. 
+                    <strong>ATL</strong> (Acute Training Load, red) = fatigue, 7-day EMA. 
+                    <strong>TSB</strong> (Training Stress Balance, green) = form = CTL − ATL. 
+                    Positive TSB = fresh &amp; ready to race. Negative = fatigued but building fitness.
+                </div>
+                <svg id="pmc-chart"></svg>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background: #3498db;"></div> CTL (Fitness)</div>
+                    <div class="legend-item"><div class="legend-color" style="background: #e74c3c;"></div> ATL (Fatigue)</div>
+                    <div class="legend-item"><div class="legend-color" style="background: #2ecc71;"></div> TSB (Form)</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2 class="chart-title">🗓️ Training Consistency Heatmap</h2>
+                <div class="metric-explanation">
+                    <strong>Consistency beats intensity.</strong> Each square is one day — colored by ride duration.
+                    Grey = rest day. The goal is to fill as many squares as possible without gaps!
+                </div>
+                <div id="heatmap-chart"></div>
+            </div>
+
+            <div class="chart-container">
+                <h2 class="chart-title">🕸️ Performance Radar — Progression by Groups of 10 Rides</h2>
+                <div class="metric-explanation">
+                    <strong>Each polygon = 10 rides averaged.</strong> Darker = older, brighter = newer.
+                    A growing polygon = you're improving! Axes: NP (raw power), Efficiency Factor, VO2max estimate, 
+                    Aerobic Endurance (inverse decoupling).
+                </div>
+                <div id="radar-chart" style="display:flex; justify-content:center;"></div>
+            </div>
+
             <div class="chart-container">
                 <h2 class="chart-title">📊 Recent Activities</h2>
                 <table class="activity-table" id="activity-table">
@@ -656,8 +740,13 @@
                     ? estimateVO2max(a.average_watts, a.average_heartrate) : null,
                 decoupling: a.decoupling ?? null,
                 best1min: a.best_1min ?? null,
+                best2min: a.best_2min ?? null,
                 best5min: a.best_5min ?? null,
+                best10min: a.best_10min ?? null,
                 best20min: a.best_20min ?? null,
+                best60min: a.best_60min ?? null,
+                best5s: a.best_5s ?? null,
+                best30s: a.best_30s ?? null,
             })).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
             
             document.getElementById('loading').style.display = 'none';
@@ -679,10 +768,18 @@
         createTimeSeriesChart('vo2max-chart', 'vo2max', '#2ecc71', 'ml/kg/min', 1);
         createTimeSeriesChart('power-chart', 'average_watts', '#f39c12', 'W', 0);
         createTimeSeriesChart('hr-chart', 'average_heartrate', '#ff6b6b', 'bpm', 0);
+        createCadenceChart();
+        createHRRecoveryChart();
         createTimeSeriesChart('decoupling-chart', 'decoupling', '#9b59b6', '%', 1, true);
         createBestEffortsChart();
         createWeeklyVolumeChart();
         createZoneSummaryChart();
+        createFTPChart();
+        createMmpChart();
+        createPowerHrScatter();
+        createPMCChart();
+        createHeatmap();
+        createRadarChart();
         renderActivityTable();
     }
     
@@ -894,6 +991,42 @@
                 window.location.href = `activity.html?id=${d.id}`;
             });
         
+        // 4-week rolling average line
+        if (data.length >= 4) {
+            const windowSize = 4;
+            const rolling = data.map((d, i) => {
+                const window = data.slice(Math.max(0, i - windowSize + 1), i + 1);
+                return {
+                    start_date: d.start_date,
+                    val: window.reduce((s, w) => s + w[metric], 0) / window.length
+                };
+            }).filter((_, i) => i >= windowSize - 1);
+
+            const rollingLine = d3.line()
+                .x(d => x(new Date(d.start_date)))
+                .y(d => y(d.val))
+                .curve(d3.curveMonotoneX);
+
+            svg.append('path')
+                .datum(rolling)
+                .attr('fill', 'none')
+                .attr('stroke', '#ffffff')
+                .attr('stroke-width', 2.5)
+                .attr('opacity', 0.6)
+                .attr('stroke-dasharray', '6,3')
+                .attr('d', rollingLine);
+
+            // Label at end
+            const last = rolling[rolling.length - 1];
+            svg.append('text')
+                .attr('x', x(new Date(last.start_date)) + 6)
+                .attr('y', y(last.val) + 4)
+                .attr('fill', '#fff')
+                .attr('opacity', 0.7)
+                .style('font-size', '10px')
+                .text('4w avg');
+        }
+
         // Trend indicator
         const trendChange = trendData[1].y - trendData[0].y;
         const trendPercent = (trendChange / trendData[0].y * 100);
@@ -1266,6 +1399,595 @@
         }).join('');
     }
     
+    // ── FTP Progression ──────────────────────────────────────────────────────
+    function createFTPChart() {
+        const data = allActivities
+            .filter(a => a.best20min)
+            .map(a => ({ date: new Date(a.start_date), ftp: a.best20min * 0.95 }));
+        if (data.length === 0) return;
+
+        const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+        const container = document.getElementById('ftp-chart').parentElement;
+        const width = container.clientWidth - margin.left - margin.right - 40;
+        const height = 300 - margin.top - margin.bottom;
+
+        const svg = d3.select('#ftp-chart')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleTime().domain(d3.extent(data, d => d.date)).range([0, width]);
+        const y = d3.scaleLinear()
+            .domain([d3.min(data, d => d.ftp) * 0.9, d3.max(data, d => d.ftp) * 1.05])
+            .range([height, 0]);
+
+        svg.append('g').attr('class', 'grid')
+            .call(d3.axisLeft(y).tickSize(-width).tickFormat(''));
+        svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x).ticks(6));
+        svg.append('g').call(d3.axisLeft(y));
+
+        // Area fill
+        svg.append('path')
+            .datum(data)
+            .attr('fill', '#e74c3c')
+            .attr('opacity', 0.15)
+            .attr('d', d3.area().x(d => x(d.date)).y0(height).y1(d => y(d.ftp)).curve(d3.curveMonotoneX));
+
+        svg.append('path')
+            .datum(data)
+            .attr('fill', 'none')
+            .attr('stroke', '#e74c3c')
+            .attr('stroke-width', 2.5)
+            .attr('d', d3.line().x(d => x(d.date)).y(d => y(d.ftp)).curve(d3.curveMonotoneX));
+
+        // Best FTP line
+        const bestFTP = d3.max(data, d => d.ftp);
+        svg.append('line')
+            .attr('x1', 0).attr('x2', width)
+            .attr('y1', y(bestFTP)).attr('y2', y(bestFTP))
+            .attr('stroke', '#ff6b6b').attr('stroke-dasharray', '6,3').attr('opacity', 0.6);
+        svg.append('text').attr('x', width - 5).attr('y', y(bestFTP) - 5)
+            .attr('text-anchor', 'end').attr('fill', '#ff6b6b').style('font-size', '11px')
+            .text(`Best: ${bestFTP.toFixed(0)}W`);
+
+        svg.selectAll('circle').data(data).enter().append('circle')
+            .attr('cx', d => x(d.date)).attr('cy', d => y(d.ftp))
+            .attr('r', 4).attr('fill', '#e74c3c').attr('opacity', 0.8)
+            .on('mouseover', function(event, d) {
+                showTooltip(`<div class="tooltip-row"><span class="tooltip-label">Date</span><span class="tooltip-value">${d.date.toLocaleDateString()}</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label">Est. FTP</span><span class="tooltip-value power">${d.ftp.toFixed(0)} W</span></div>`, event);
+            }).on('mouseout', hideTooltip);
+    }
+
+    // ── Mean Maximal Power Curve ──────────────────────────────────────────────
+    function createMmpChart() {
+        const durations = [
+            { label: '5s', field: 'best5s', secs: 5 },
+            { label: '30s', field: 'best30s', secs: 30 },
+            { label: '1min', field: 'best1min', secs: 60 },
+            { label: '2min', field: 'best2min', secs: 120 },
+            { label: '5min', field: 'best5min', secs: 300 },
+            { label: '10min', field: 'best10min', secs: 600 },
+            { label: '20min', field: 'best20min', secs: 1200 },
+            { label: '60min', field: 'best60min', secs: 3600 },
+        ];
+
+        const curveData = durations.map(d => ({
+            label: d.label,
+            secs: d.secs,
+            power: d3.max(allActivities, a => a[d.field]) || null
+        })).filter(d => d.power !== null);
+
+        if (curveData.length < 3) return;
+
+        const margin = { top: 20, right: 30, bottom: 50, left: 70 };
+        const container = document.getElementById('mmp-chart').parentElement;
+        const width = container.clientWidth - margin.left - margin.right - 40;
+        const height = 320 - margin.top - margin.bottom;
+
+        const svg = d3.select('#mmp-chart')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleLog().domain([5, 3600]).range([0, width]);
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(curveData, d => d.power) * 1.1])
+            .range([height, 0]);
+
+        svg.append('g').attr('class', 'grid')
+            .call(d3.axisLeft(y).tickSize(-width).tickFormat(''));
+        svg.append('g').attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x).tickValues([5, 30, 60, 120, 300, 600, 1200, 3600])
+                .tickFormat(s => s >= 3600 ? '60min' : s >= 60 ? `${s/60}min` : `${s}s`));
+        svg.append('g').call(d3.axisLeft(y));
+
+        svg.append('text').attr('x', -height/2).attr('y', -55).attr('transform', 'rotate(-90)')
+            .attr('text-anchor', 'middle').attr('fill', '#888').style('font-size', '12px').text('Power (W)');
+
+        svg.append('path').datum(curveData)
+            .attr('fill', '#f39c12').attr('opacity', 0.12)
+            .attr('d', d3.area().x(d => x(d.secs)).y0(height).y1(d => y(d.power)).curve(d3.curveMonotoneX));
+
+        svg.append('path').datum(curveData)
+            .attr('fill', 'none').attr('stroke', '#f39c12').attr('stroke-width', 3)
+            .attr('d', d3.line().x(d => x(d.secs)).y(d => y(d.power)).curve(d3.curveMonotoneX));
+
+        svg.selectAll('circle').data(curveData).enter().append('circle')
+            .attr('cx', d => x(d.secs)).attr('cy', d => y(d.power))
+            .attr('r', 6).attr('fill', '#f39c12').attr('stroke', '#0f0f23').attr('stroke-width', 2)
+            .on('mouseover', function(event, d) {
+                showTooltip(`<div class="tooltip-row"><span class="tooltip-label">Duration</span><span class="tooltip-value">${d.label}</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label">Best Power</span><span class="tooltip-value power">${d.power.toFixed(0)} W</span></div>`, event);
+            }).on('mouseout', hideTooltip);
+    }
+
+    // ── Power vs HR Scatter (all rides) ──────────────────────────────────────
+    function createPowerHrScatter() {
+        const data = allActivities
+            .filter(a => a.average_watts && a.average_heartrate)
+            .map(a => ({ watts: a.average_watts, hr: a.average_heartrate, date: new Date(a.start_date) }));
+        if (data.length < 3) return;
+
+        const margin = { top: 20, right: 30, bottom: 60, left: 70 };
+        const container = document.getElementById('power-hr-scatter').parentElement;
+        const width = container.clientWidth - margin.left - margin.right - 40;
+        const height = 350 - margin.top - margin.bottom;
+
+        const svg = d3.select('#power-hr-scatter')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleLinear().domain([d3.min(data, d => d.hr) * 0.95, d3.max(data, d => d.hr) * 1.02]).range([0, width]);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.watts) * 1.1]).range([height, 0]);
+        const colorScale = d3.scaleSequential(d3.interpolateCool)
+            .domain(d3.extent(data, d => d.date.getTime()));
+
+        svg.append('g').attr('class', 'grid').call(d3.axisLeft(y).tickSize(-width).tickFormat(''));
+        svg.append('g').attr('class', 'grid').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x).tickSize(-height).tickFormat(''));
+        svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x))
+            .append('text').attr('fill', '#888').attr('x', width/2).attr('y', 45)
+            .attr('text-anchor', 'middle').style('font-size', '12px').text('Heart Rate (bpm)');
+        svg.append('g').call(d3.axisLeft(y))
+            .append('text').attr('fill', '#888').attr('transform', 'rotate(-90)')
+            .attr('y', -55).attr('x', -height/2).attr('text-anchor', 'middle')
+            .style('font-size', '12px').text('Avg Power (W)');
+
+        // Trend line
+        const xMean = d3.mean(data, d => d.hr), yMean = d3.mean(data, d => d.watts);
+        const slope = d3.sum(data, d => (d.hr - xMean) * (d.watts - yMean)) / d3.sum(data, d => (d.hr - xMean) ** 2);
+        const intercept = yMean - slope * xMean;
+        const [xMin, xMax] = d3.extent(data, d => d.hr);
+        svg.append('line')
+            .attr('x1', x(xMin)).attr('y1', y(slope * xMin + intercept))
+            .attr('x2', x(xMax)).attr('y2', y(slope * xMax + intercept))
+            .attr('stroke', '#00d4ff').attr('stroke-width', 2).attr('stroke-dasharray', '8,4').attr('opacity', 0.7);
+
+        svg.selectAll('circle').data(data).enter().append('circle')
+            .attr('cx', d => x(d.hr)).attr('cy', d => y(d.watts))
+            .attr('r', 6).attr('fill', d => colorScale(d.date.getTime())).attr('opacity', 0.75)
+            .attr('stroke', '#0f0f23').attr('stroke-width', 1)
+            .on('mouseover', function(event, d) {
+                showTooltip(`<div class="tooltip-row"><span class="tooltip-label">Date</span><span class="tooltip-value">${d.date.toLocaleDateString()}</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label">Avg HR</span><span class="tooltip-value hr">${d.hr.toFixed(0)} bpm</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label">Avg Power</span><span class="tooltip-value power">${d.watts.toFixed(0)} W</span></div>`, event);
+            }).on('mouseout', hideTooltip);
+
+        // Color legend (older → newer)
+        const legendW = 150, legendH = 10;
+        const lg = svg.append('g').attr('transform', `translate(${width - legendW - 10}, 5)`);
+        const defs = svg.append('defs');
+        const grad = defs.append('linearGradient').attr('id', 'dateGrad');
+        grad.append('stop').attr('offset', '0%').attr('stop-color', colorScale(d3.min(data, d => d.date.getTime())));
+        grad.append('stop').attr('offset', '100%').attr('stop-color', colorScale(d3.max(data, d => d.date.getTime())));
+        lg.append('rect').attr('width', legendW).attr('height', legendH).style('fill', 'url(#dateGrad)').attr('rx', 3);
+        lg.append('text').attr('y', legendH + 14).attr('fill', '#888').style('font-size', '10px').text('Older');
+        lg.append('text').attr('x', legendW).attr('y', legendH + 14).attr('text-anchor', 'end').attr('fill', '#888').style('font-size', '10px').text('Newer');
+    }
+
+    // ── Performance Management Chart (CTL / ATL / TSB) ───────────────────────
+    function createPMCChart() {
+        if (allActivities.length === 0) return;
+
+        const ftp = d3.max(allActivities, a => a.best20min) * 0.95 || 200;
+
+        // Build daily TSS map
+        const tssByDay = {};
+        allActivities.forEach(a => {
+            const day = a.start_date.slice(0, 10);
+            const np = a.normalized_power || a.average_watts || 0;
+            const if_ = np / ftp;
+            const tss = (a.moving_time / 3600) * if_ * if_ * 100;
+            tssByDay[day] = (tssByDay[day] || 0) + tss;
+        });
+
+        // Generate daily series from first to last ride
+        const start = new Date(allActivities[0].start_date.slice(0, 10));
+        const end = new Date();
+        const days = [];
+        let ctl = 0, atl = 0;
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const key = d.toISOString().slice(0, 10);
+            const tss = tssByDay[key] || 0;
+            ctl = ctl + (tss - ctl) * (1 - Math.exp(-1/42));
+            atl = atl + (tss - atl) * (1 - Math.exp(-1/7));
+            days.push({ date: new Date(d), ctl, atl, tsb: ctl - atl });
+        }
+
+        const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+        const container = document.getElementById('pmc-chart').parentElement;
+        const width = container.clientWidth - margin.left - margin.right - 40;
+        const height = 320 - margin.top - margin.bottom;
+
+        const svg = d3.select('#pmc-chart')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleTime().domain(d3.extent(days, d => d.date)).range([0, width]);
+        const allVals = days.flatMap(d => [d.ctl, d.atl, d.tsb]);
+        const y = d3.scaleLinear().domain([d3.min(allVals) * 1.1, d3.max(allVals) * 1.1]).range([height, 0]);
+
+        svg.append('g').attr('class', 'grid').call(d3.axisLeft(y).tickSize(-width).tickFormat(''));
+        // Zero line
+        svg.append('line').attr('x1', 0).attr('x2', width).attr('y1', y(0)).attr('y2', y(0))
+            .attr('stroke', '#555').attr('stroke-dasharray', '4,2');
+        svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x).ticks(8));
+        svg.append('g').call(d3.axisLeft(y));
+
+        const line = field => d3.line().x(d => x(d.date)).y(d => y(d[field])).curve(d3.curveMonotoneX);
+
+        // TSB area (above/below zero)
+        svg.append('path').datum(days)
+            .attr('fill', '#2ecc71').attr('opacity', 0.15)
+            .attr('d', d3.area().x(d => x(d.date))
+                .y0(y(0)).y1(d => y(Math.max(0, d.tsb))).curve(d3.curveMonotoneX));
+        svg.append('path').datum(days)
+            .attr('fill', '#e74c3c').attr('opacity', 0.1)
+            .attr('d', d3.area().x(d => x(d.date))
+                .y0(y(0)).y1(d => y(Math.min(0, d.tsb))).curve(d3.curveMonotoneX));
+
+        [['ctl', '#3498db', 2.5], ['atl', '#e74c3c', 2], ['tsb', '#2ecc71', 1.5]].forEach(([field, color, sw]) => {
+            svg.append('path').datum(days)
+                .attr('fill', 'none').attr('stroke', color).attr('stroke-width', sw)
+                .attr('d', line(field));
+        });
+    }
+
+    // ── Cadence Trend ─────────────────────────────────────────────────────────
+    function createCadenceChart() {
+        const data = allActivities.filter(a => a.average_cadence > 0);
+        if (data.length < 2) return;
+
+        const container = document.getElementById('cadence-chart');
+        const width = container.parentElement.clientWidth || 500;
+        const height = 260;
+        const margin = { top: 20, right: 30, bottom: 50, left: 55 };
+        const iw = width - margin.left - margin.right;
+        const ih = height - margin.top - margin.bottom;
+
+        const svg = d3.select('#cadence-chart')
+            .attr('width', width).attr('height', height);
+        svg.selectAll('*').remove();
+        const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleTime().domain(d3.extent(data, d => new Date(d.start_date))).range([0, iw]);
+        const y = d3.scaleLinear()
+            .domain([d3.min(data, d => d.average_cadence) * 0.95, d3.max(data, d => d.average_cadence) * 1.05])
+            .range([ih, 0]);
+
+        g.append('g').attr('transform', `translate(0,${ih})`)
+            .call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat('%b %y')))
+            .selectAll('text').style('fill', '#aaa').style('font-size', '11px');
+        g.append('g').call(d3.axisLeft(y).ticks(5).tickFormat(d => `${d}`)).selectAll('text').style('fill', '#aaa').style('font-size', '11px');
+        g.selectAll('.domain, .tick line').style('stroke', '#444');
+
+        g.append('text').attr('x', -ih / 2).attr('y', -42).attr('transform', 'rotate(-90)')
+            .attr('text-anchor', 'middle').style('fill', '#aaa').style('font-size', '11px').text('rpm');
+
+        // Scatter dots
+        g.selectAll('.dot').data(data).enter().append('circle')
+            .attr('class', 'dot')
+            .attr('cx', d => x(new Date(d.start_date)))
+            .attr('cy', d => y(d.average_cadence))
+            .attr('r', 4)
+            .attr('fill', '#1abc9c')
+            .attr('opacity', 0.6);
+
+        // 4-week rolling average
+        const msPerWeek = 7 * 24 * 3600 * 1000;
+        const rolling = data.map((d, i) => {
+            const cutoff = new Date(d.start_date) - 4 * msPerWeek;
+            const window = data.slice(0, i + 1).filter(a => new Date(a.start_date) >= cutoff);
+            return { date: new Date(d.start_date), value: window.reduce((s, a) => s + a.average_cadence, 0) / window.length };
+        });
+        const lineGen = d3.line().x(d => x(d.date)).y(d => y(d.value)).curve(d3.curveCatmullRom);
+        g.append('path').datum(rolling).attr('fill', 'none')
+            .attr('stroke', '#1abc9c').attr('stroke-width', 2.5)
+            .attr('stroke-dasharray', '6 3').attr('d', lineGen);
+
+        // Tooltip
+        const tooltip = d3.select('body').select('#cadence-tooltip').empty()
+            ? d3.select('body').append('div').attr('id', 'cadence-tooltip')
+                .style('position', 'absolute').style('background', 'rgba(20,20,30,0.95)')
+                .style('color', '#fff').style('padding', '8px 12px').style('border-radius', '8px')
+                .style('font-size', '12px').style('pointer-events', 'none').style('opacity', 0)
+            : d3.select('#cadence-tooltip');
+
+        g.selectAll('.dot')
+            .on('mouseover', function(event, d) {
+                d3.select(this).attr('r', 6).attr('opacity', 1);
+                tooltip.style('opacity', 1)
+                    .html(`<strong>${new Date(d.start_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'})}</strong><br>Cadence: <b>${d.average_cadence.toFixed(1)} rpm</b>`);
+            })
+            .on('mousemove', (event) => tooltip.style('left', (event.pageX + 12) + 'px').style('top', (event.pageY - 28) + 'px'))
+            .on('mouseout', function() { d3.select(this).attr('r', 4).attr('opacity', 0.6); tooltip.style('opacity', 0); });
+    }
+
+    // ── HR Recovery Rate ──────────────────────────────────────────────────────
+    function createHRRecoveryChart() {
+        const data = allActivities.filter(a => a.hr_recovery != null && a.hr_recovery > 0);
+        if (data.length < 2) return;
+
+        const container = document.getElementById('hr-recovery-chart');
+        const width = container.parentElement.clientWidth || 500;
+        const height = 260;
+        const margin = { top: 20, right: 30, bottom: 50, left: 55 };
+        const iw = width - margin.left - margin.right;
+        const ih = height - margin.top - margin.bottom;
+
+        const svg = d3.select('#hr-recovery-chart')
+            .attr('width', width).attr('height', height);
+        svg.selectAll('*').remove();
+        const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleTime().domain(d3.extent(data, d => new Date(d.start_date))).range([0, iw]);
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.hr_recovery) * 1.1])
+            .range([ih, 0]);
+
+        g.append('g').attr('transform', `translate(0,${ih})`)
+            .call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat('%b %y')))
+            .selectAll('text').style('fill', '#aaa').style('font-size', '11px');
+        g.append('g').call(d3.axisLeft(y).ticks(5).tickFormat(d => `${d.toFixed(0)}`)).selectAll('text').style('fill', '#aaa').style('font-size', '11px');
+        g.selectAll('.domain, .tick line').style('stroke', '#444');
+
+        g.append('text').attr('x', -ih / 2).attr('y', -42).attr('transform', 'rotate(-90)')
+            .attr('text-anchor', 'middle').style('fill', '#aaa').style('font-size', '11px').text('bpm drop');
+
+        // Colour dots by value: high drop = good (green), low drop = poor (red)
+        const colorScale = d3.scaleSequential(d3.interpolateRdYlGn)
+            .domain([d3.min(data, d => d.hr_recovery), d3.max(data, d => d.hr_recovery)]);
+
+        g.selectAll('.dot').data(data).enter().append('circle')
+            .attr('class', 'dot')
+            .attr('cx', d => x(new Date(d.start_date)))
+            .attr('cy', d => y(d.hr_recovery))
+            .attr('r', 5)
+            .attr('fill', d => colorScale(d.hr_recovery))
+            .attr('opacity', 0.75);
+
+        // 4-week rolling average
+        const msPerWeek = 7 * 24 * 3600 * 1000;
+        const rolling = data.map((d, i) => {
+            const cutoff = new Date(d.start_date) - 4 * msPerWeek;
+            const window = data.slice(0, i + 1).filter(a => new Date(a.start_date) >= cutoff);
+            return { date: new Date(d.start_date), value: window.reduce((s, a) => s + a.hr_recovery, 0) / window.length };
+        });
+        const lineGen = d3.line().x(d => x(d.date)).y(d => y(d.value)).curve(d3.curveCatmullRom);
+        g.append('path').datum(rolling).attr('fill', 'none')
+            .attr('stroke', '#e91e63').attr('stroke-width', 2.5)
+            .attr('stroke-dasharray', '6 3').attr('d', lineGen);
+
+        // Tooltip
+        const tooltip = d3.select('body').select('#hrrecovery-tooltip').empty()
+            ? d3.select('body').append('div').attr('id', 'hrrecovery-tooltip')
+                .style('position', 'absolute').style('background', 'rgba(20,20,30,0.95)')
+                .style('color', '#fff').style('padding', '8px 12px').style('border-radius', '8px')
+                .style('font-size', '12px').style('pointer-events', 'none').style('opacity', 0)
+            : d3.select('#hrrecovery-tooltip');
+
+        g.selectAll('.dot')
+            .on('mouseover', function(event, d) {
+                d3.select(this).attr('r', 7).attr('opacity', 1);
+                tooltip.style('opacity', 1)
+                    .html(`<strong>${new Date(d.start_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'})}</strong><br>HR drop (peak→end): <b>${d.hr_recovery.toFixed(1)} bpm</b>`);
+            })
+            .on('mousemove', (event) => tooltip.style('left', (event.pageX + 12) + 'px').style('top', (event.pageY - 28) + 'px'))
+            .on('mouseout', function() { d3.select(this).attr('r', 5).attr('opacity', 0.75); tooltip.style('opacity', 0); });
+    }
+
+    // ── Training Consistency Heatmap ─────────────────────────────────────────
+    function createHeatmap() {
+        const ridesByDay = {};
+        allActivities.forEach(a => {
+            const day = a.start_date.slice(0, 10);
+            ridesByDay[day] = (ridesByDay[day] || 0) + (a.moving_time / 3600);
+        });
+
+        const start = new Date(allActivities[0].start_date.slice(0, 10));
+        const end = new Date();
+        // Align to Monday
+        start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+
+        const cellSize = 14, cellGap = 2, step = cellSize + cellGap;
+        const weeks = Math.ceil((end - start) / (7 * 86400000)) + 1;
+        const days = ['Mo', '', 'We', '', 'Fr', '', 'Su'];
+        const svgWidth = weeks * step + 60;
+        const svgHeight = 7 * step + 40;
+
+        const container = d3.select('#heatmap-chart');
+        container.style('overflow-x', 'auto');
+        const svg = container.append('svg').attr('width', svgWidth).attr('height', svgHeight);
+        const g = svg.append('g').attr('transform', 'translate(30, 20)');
+
+        const maxHours = d3.max(Object.values(ridesByDay)) || 2;
+        const colorScale = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, maxHours]);
+
+        // Day labels
+        days.forEach((label, i) => {
+            g.append('text').attr('x', -5).attr('y', i * step + cellSize)
+                .attr('text-anchor', 'end').attr('fill', '#666').style('font-size', '10px').text(label);
+        });
+
+        // Month labels + cells
+        let lastMonth = -1;
+        for (let d = new Date(start), week = 0; d <= end; d.setDate(d.getDate() + 7), week++) {
+            for (let dow = 0; dow < 7; dow++) {
+                const cur = new Date(d);
+                cur.setDate(cur.getDate() + dow);
+                if (cur > end) continue;
+                const key = cur.toISOString().slice(0, 10);
+                const hours = ridesByDay[key] || 0;
+                const month = cur.getMonth();
+                if (month !== lastMonth) {
+                    g.append('text').attr('x', week * step).attr('y', -5)
+                        .attr('fill', '#888').style('font-size', '10px')
+                        .text(cur.toLocaleString('default', { month: 'short' }));
+                    lastMonth = month;
+                }
+                g.append('rect')
+                    .attr('x', week * step).attr('y', dow * step)
+                    .attr('width', cellSize).attr('height', cellSize)
+                    .attr('rx', 2)
+                    .attr('fill', hours > 0 ? colorScale(hours) : '#1e1e3a')
+                    .attr('stroke', '#0f0f23').attr('stroke-width', 1)
+                    .on('mouseover', function(event) {
+                        if (hours > 0)
+                            showTooltip(`<div class="tooltip-row"><span class="tooltip-label">${key}</span><span class="tooltip-value">${hours.toFixed(1)}h</span></div>`, event);
+                    }).on('mouseout', hideTooltip);
+            }
+        }
+    }
+
+    // ── Performance Radar Chart ───────────────────────────────────────────────
+    function createRadarChart() {
+        const groupSize = 10;
+        const groups = [];
+        for (let i = 0; i < allActivities.length; i += groupSize) {
+            groups.push(allActivities.slice(i, i + groupSize));
+        }
+        if (groups.length < 2) return;
+
+        const axes = [
+            { key: 'np',        label: 'Power (NP)',           unit: 'W',        fn: a => a.normalizedPower || a.normalized_power },
+            { key: 'ef',        label: 'Efficiency Factor',    unit: 'W/bpm',    fn: a => a.efficiencyFactor || a.efficiency_factor },
+            { key: 'vo2max',    label: 'VO2max',               unit: 'ml/kg/min',fn: a => a.vo2max },
+            { key: 'endurance', label: 'Endurance',            unit: '(low decoupling)', fn: a => a.decoupling != null ? Math.max(0, 15 - Math.abs(a.decoupling)) : null },
+        ];
+
+        const avg = (arr, fn) => { const v = arr.map(fn).filter(x => x != null && !isNaN(x)); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; };
+
+        const groupStats = groups.map((rides, gi) => {
+            const stat = { label: `Rides ${gi*groupSize+1}–${gi*groupSize+rides.length}`, count: rides.length };
+            axes.forEach(ax => { stat[ax.key] = avg(rides, ax.fn); });
+            return stat;
+        });
+
+        // Normalize each axis 0–1 across groups
+        const normalized = axes.map(axis => {
+            const vals = groupStats.map(g => g[axis.key]).filter(v => v != null);
+            const [mn, mx] = [Math.min(...vals), Math.max(...vals)];
+            return { ...axis, min: mn, max: mx };
+        });
+
+        const radarSize = 320, r = 110;
+        const cx = radarSize / 2, cy = radarSize / 2;
+        const legendRowH = 20;
+        const legendH = groups.length * legendRowH + 16;
+        const totalH = radarSize + legendH;
+        const numAxes = axes.length;
+        const angleStep = (2 * Math.PI) / numAxes;
+        const angle = i => -Math.PI / 2 + i * angleStep;
+
+        const colorScale = d3.scaleSequential(d3.interpolatePlasma).domain([0, groups.length - 1]);
+
+        const svg = d3.select('#radar-chart').append('svg')
+            .attr('width', radarSize).attr('height', totalH);
+        const g = svg.append('g').attr('transform', `translate(${cx},${cy})`);
+
+        // Grid circles + labels
+        [0.25, 0.5, 0.75, 1.0].forEach(t => {
+            g.append('circle').attr('r', r * t)
+                .attr('fill', 'none').attr('stroke', '#333').attr('stroke-dasharray', '3,2');
+            g.append('text').attr('x', 4).attr('y', -r * t + 4)
+                .attr('fill', '#555').style('font-size', '9px').text(`${Math.round(t * 100)}%`);
+        });
+
+        // Axis lines + labels
+        axes.forEach((axis, i) => {
+            const a = angle(i);
+            g.append('line').attr('x1', 0).attr('y1', 0)
+                .attr('x2', Math.cos(a) * r).attr('y2', Math.sin(a) * r)
+                .attr('stroke', '#444');
+            const labelR = r + 24;
+            g.append('text')
+                .attr('x', Math.cos(a) * labelR).attr('y', Math.sin(a) * labelR)
+                .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                .attr('fill', '#aaa').style('font-size', '11px').text(axis.label);
+        });
+
+        // Draw each group polygon + hover dots
+        groupStats.forEach((gs, gi) => {
+            const pts = axes.map((axis, i) => {
+                const norm = normalized[i];
+                const val = gs[axis.key];
+                if (val == null) return null;
+                const t = norm.max === norm.min ? 0.5 : (val - norm.min) / (norm.max - norm.min);
+                const a = angle(i);
+                return { x: Math.cos(a) * r * t, y: Math.sin(a) * r * t, val, axis, t };
+            });
+            if (pts.some(p => p === null)) return;
+
+            const pathD = pts.map((p, i) => `${i===0?'M':'L'}${p.x},${p.y}`).join(' ') + 'Z';
+            const color = colorScale(gi);
+            const isLatest = gi === groupStats.length - 1;
+
+            g.append('path').attr('d', pathD)
+                .attr('fill', color).attr('fill-opacity', 0.12)
+                .attr('stroke', color).attr('stroke-width', isLatest ? 2.5 : 1.5)
+                .attr('stroke-opacity', 0.85);
+
+            // Hover dots on each vertex
+            pts.forEach(pt => {
+                g.append('circle')
+                    .attr('cx', pt.x).attr('cy', pt.y).attr('r', isLatest ? 5 : 4)
+                    .attr('fill', color).attr('stroke', '#0f0f23').attr('stroke-width', 1.5)
+                    .attr('cursor', 'pointer')
+                    .on('mouseover', function(event) {
+                        d3.select(this).attr('r', 8);
+                        showTooltip(`
+                            <div class="tooltip-title">${gs.label}</div>
+                            <div class="tooltip-row"><span class="tooltip-label">${pt.axis.label}</span>
+                            <span class="tooltip-value" style="color:${color}">${pt.val.toFixed(2)} ${pt.axis.unit}</span></div>
+                            <div class="tooltip-row"><span class="tooltip-label">Percentile</span>
+                            <span class="tooltip-value">${Math.round(pt.t * 100)}% of your range</span></div>
+                        `, event);
+                    })
+                    .on('mouseout', function() {
+                        d3.select(this).attr('r', isLatest ? 5 : 4);
+                        hideTooltip();
+                    });
+            });
+        });
+
+        // Legend below chart
+        const legendG = svg.append('g').attr('transform', `translate(${radarSize/2 - 80}, ${radarSize + 8})`);
+        legendG.append('rect').attr('x', -8).attr('y', -4)
+            .attr('width', 176).attr('height', legendH - 4)
+            .attr('fill', '#1a1a3e').attr('rx', 6).attr('opacity', 0.7);
+        groupStats.forEach((gs, gi) => {
+            const color = colorScale(gi);
+            const y = gi * legendRowH + 10;
+            legendG.append('rect').attr('x', 0).attr('y', y - 8).attr('width', 12).attr('height', 12)
+                .attr('fill', color).attr('rx', 2);
+            legendG.append('text').attr('x', 18).attr('y', y)
+                .attr('fill', '#ccc').style('font-size', '11px')
+                .text(`${gs.label}${gs.count < groupSize ? ' ⭐' : ''}`);
+        });
+    }
+
     // Initialize
     loadAllActivities();
     </script>
