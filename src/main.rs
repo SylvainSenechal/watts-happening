@@ -74,10 +74,144 @@ struct ActivitySummary {
     id: i64,
     name: String,
     start_date: String,
+    start_date_local: String,
     distance: f64,
     moving_time: i32,
     average_watts: Option<f64>,
+    weighted_average_watts: Option<f64>,
+    max_watts: Option<f64>,
     average_heartrate: Option<f64>,
+    max_heartrate: Option<f64>,
+    average_cadence: Option<f64>,
+    total_elevation_gain: f64,
+    kilojoules: Option<f64>,
+    // Computed from streams
+    normalized_power: Option<f64>,
+    efficiency_factor: Option<f64>,
+    decoupling: Option<f64>,
+    best_1min: Option<f64>,
+    best_5min: Option<f64>,
+    best_20min: Option<f64>,
+    zone_seconds: Option<[i32; 6]>,
+}
+
+struct ActivityMetrics {
+    normalized_power: Option<f64>,
+    efficiency_factor: Option<f64>,
+    decoupling: Option<f64>,
+    best_1min: Option<f64>,
+    best_5min: Option<f64>,
+    best_20min: Option<f64>,
+    zone_seconds: Option<[i32; 6]>,
+}
+
+fn trim_trailing_zeros(watts: &[f64]) -> &[f64] {
+    let mut end = watts.len();
+    while end > 0 && watts[end - 1] == 0.0 {
+        end -= 1;
+    }
+    &watts[..end]
+}
+
+fn compute_metrics(streams: &ActivityStreams) -> ActivityMetrics {
+    let empty = ActivityMetrics {
+        normalized_power: None,
+        efficiency_factor: None,
+        decoupling: None,
+        best_1min: None,
+        best_5min: None,
+        best_20min: None,
+        zone_seconds: None,
+    };
+
+    let watts_raw = match &streams.watts {
+        Some(w) if !w.is_empty() => w,
+        _ => return empty,
+    };
+    let watts = trim_trailing_zeros(watts_raw);
+    if watts.is_empty() {
+        return empty;
+    }
+
+    // --- Normalized Power (30s rolling avg → 4th power) ---
+    let normalized_power = if watts.len() >= 30 {
+        let rolling: Vec<f64> = (29..watts.len())
+            .map(|i| watts[i - 29..=i].iter().sum::<f64>() / 30.0)
+            .collect();
+        let avg_fourth = rolling.iter().map(|&p| p.powi(4)).sum::<f64>() / rolling.len() as f64;
+        Some(avg_fourth.powf(0.25))
+    } else {
+        None
+    };
+
+    // --- Efficiency Factor (NP / avg HR) ---
+    let efficiency_factor = normalized_power.and_then(|np| {
+        streams.heartrate.as_ref().and_then(|hr_raw| {
+            let hr: Vec<f64> = hr_raw.iter().take(watts.len()).map(|&h| h as f64).collect();
+            let valid: Vec<f64> = hr.iter().copied().filter(|&h| h > 0.0).collect();
+            if valid.is_empty() { return None; }
+            let avg_hr = valid.iter().sum::<f64>() / valid.len() as f64;
+            if avg_hr > 0.0 { Some(np / avg_hr) } else { None }
+        })
+    });
+
+    // --- Aerobic Decoupling ---
+    let decoupling = if watts.len() >= 600 {
+        streams.heartrate.as_ref().and_then(|hr_raw| {
+            let hr: Vec<f64> = hr_raw.iter().take(watts.len()).map(|&h| h as f64).collect();
+            let mid = watts.len() / 2;
+            let first_power = watts[..mid].iter().sum::<f64>() / mid as f64;
+            let second_power = watts[mid..].iter().sum::<f64>() / (watts.len() - mid) as f64;
+            let first_hr = hr[..mid].iter().sum::<f64>() / mid as f64;
+            let second_hr = hr[mid..].iter().sum::<f64>() / (hr.len() - mid) as f64;
+            if first_hr == 0.0 || first_power == 0.0 { return None; }
+            let first_ef = first_power / first_hr;
+            let second_ef = second_power / second_hr;
+            Some(((first_ef - second_ef) / first_ef) * 100.0)
+        })
+    } else {
+        None
+    };
+
+    // --- Best efforts (sliding window) ---
+    let best_average = |window: usize| -> Option<f64> {
+        if watts.len() < window { return None; }
+        let mut sum: f64 = watts[..window].iter().sum();
+        let mut best = sum / window as f64;
+        for i in window..watts.len() {
+            sum += watts[i] - watts[i - window];
+            best = best.max(sum / window as f64);
+        }
+        Some(best)
+    };
+    let best_1min = best_average(60);
+    let best_5min = best_average(300);
+    let best_20min = best_average(1200);
+
+    // --- Zone distribution (% of FTP = 200W estimate) ---
+    let ftp = 200.0_f64;
+    let zone_thresholds = [0.55, 0.75, 0.90, 1.05, 1.20];
+    let mut zones = [0i32; 6];
+    for &w in watts {
+        let pct = w / ftp;
+        let zone = if pct < zone_thresholds[0] { 0 }
+            else if pct < zone_thresholds[1] { 1 }
+            else if pct < zone_thresholds[2] { 2 }
+            else if pct < zone_thresholds[3] { 3 }
+            else if pct < zone_thresholds[4] { 4 }
+            else { 5 };
+        zones[zone] += 1;
+    }
+
+    ActivityMetrics {
+        normalized_power,
+        efficiency_factor,
+        decoupling,
+        best_1min,
+        best_5min,
+        best_20min,
+        zone_seconds: Some(zones),
+    }
 }
 
 impl ActivityIndex {
@@ -102,17 +236,33 @@ impl ActivityIndex {
         self.activities.iter().map(|a| a.id).collect()
     }
     
-    fn add_activity(&mut self, activity: &Activity) {
+    fn add_activity(&mut self, activity: &Activity, metrics: ActivityMetrics) {
         let summary = ActivitySummary {
             id: activity.id,
             name: activity.name.clone(),
             start_date: activity.start_date.clone(),
+            start_date_local: activity.start_date_local.clone(),
             distance: activity.distance,
             moving_time: activity.moving_time,
             average_watts: activity.average_watts,
+            weighted_average_watts: activity.weighted_average_watts,
+            max_watts: activity.max_watts,
             average_heartrate: activity.average_heartrate,
+            max_heartrate: activity.max_heartrate,
+            average_cadence: activity.average_cadence,
+            total_elevation_gain: activity.total_elevation_gain,
+            kilojoules: activity.kilojoules,
+            normalized_power: metrics.normalized_power,
+            efficiency_factor: metrics.efficiency_factor,
+            decoupling: metrics.decoupling,
+            best_1min: metrics.best_1min,
+            best_5min: metrics.best_5min,
+            best_20min: metrics.best_20min,
+            zone_seconds: metrics.zone_seconds,
         };
-        self.activities.insert(0, summary);
+        // Remove existing entry if present, then re-insert
+        self.activities.retain(|a| a.id != activity.id);
+        self.activities.push(summary);
         self.activities.sort_by(|a, b| b.start_date.cmp(&a.start_date));
     }
 }
@@ -216,7 +366,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             // Skip if file already exists (safety check)
             if activity_file_exists(activity.id) {
                 println!("      ⏭️  File already exists, skipping");
-                index.add_activity(activity);
+                // Will be picked up in the rebuild pass below
                 continue;
             }
             
@@ -229,22 +379,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         activity: activity.clone(),
                         streams: Some(streams),
                     };
-                    
-                    // Save individual file
                     save_activity_file(&activity_with_streams)?;
-                    
-                    // Add to index
-                    index.add_activity(activity);
                 }
                 Err(e) => {
                     println!("      ⚠️  Could not fetch streams: {}", e);
-                    // Still save the activity without streams
                     let activity_with_streams = ActivityWithStreams {
                         activity: activity.clone(),
                         streams: None,
                     };
                     save_activity_file(&activity_with_streams)?;
-                    index.add_activity(activity);
                 }
             }
             
@@ -254,7 +397,36 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
-    
+
+    // Rebuild full index from all activity files (computes metrics for everyone)
+    println!("\n🔧 Rebuilding index with computed metrics...");
+    index.activities.clear();
+    let mut activity_files: Vec<_> = fs::read_dir("data/activities")?
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().map(|x| x == "json").unwrap_or(false))
+        .collect();
+    activity_files.sort_by_key(|e| e.path());
+
+    for entry in &activity_files {
+        let content = match fs::read_to_string(entry.path()) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let activity_with_streams: ActivityWithStreams = match serde_json::from_str(&content) {
+            Ok(a) => a,
+            Err(_) => continue,
+        };
+        let metrics = match &activity_with_streams.streams {
+            Some(s) => compute_metrics(s),
+            None => ActivityMetrics {
+                normalized_power: None, efficiency_factor: None, decoupling: None,
+                best_1min: None, best_5min: None, best_20min: None, zone_seconds: None,
+            },
+        };
+        index.add_activity(&activity_with_streams.activity, metrics);
+    }
+    println!("   ✅ Indexed {} activities", index.activities.len());
+
     // Update timestamp and save index
     index.last_updated = chrono::Utc::now().to_rfc3339();
     index.save()?;

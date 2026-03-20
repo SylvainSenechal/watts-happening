@@ -641,44 +641,24 @@
     
     async function loadAllActivities() {
         try {
-            // Load index
             const indexResponse = await fetch('data/index.json');
             const index = await indexResponse.json();
             
-            // Load all activity details for deeper analysis
-            const activities = [];
-            
-            for (const summary of index.activities) {
-                try {
-                    const response = await fetch(`data/activities/${summary.id}.json`);
-                    const activity = await response.json();
-                    
-                    const efficiency = calculateEfficiency(summary.average_watts, summary.average_heartrate);
-                    const efficiencyFactor = calculateEfficiencyFactor(activity.streams, summary.average_heartrate);
-                    const normalizedPower = calculateNormalizedPower(activity.streams);
-                    const vo2max = estimateVO2max(summary.average_watts, summary.average_heartrate);
-                    const decoupling = calculateDecoupling(activity.streams);
-                    const bestEfforts = calculateBestEfforts(activity.streams);
-                    
-                    activities.push({
-                        ...summary,
-                        streams: activity.streams,
-                        efficiency,
-                        efficiencyFactor,
-                        normalizedPower,
-                        vo2max,
-                        decoupling,
-                        ...bestEfforts
-                    });
-                } catch (e) {
-                    console.warn(`Could not load activity ${summary.id}`, e);
-                }
-            }
-            
-            // Sort by date (oldest first for trend analysis)
-            allActivities = activities.sort((a, b) => 
-                new Date(a.start_date) - new Date(b.start_date)
-            );
+            // All metrics are precomputed in index.json by Rust — no individual file fetching needed
+            allActivities = index.activities.map(a => ({
+                ...a,
+                // Map Rust snake_case to JS camelCase for chart compatibility
+                efficiency: (a.average_watts && a.average_heartrate)
+                    ? a.average_watts / a.average_heartrate : null,
+                efficiencyFactor: a.efficiency_factor ?? null,
+                normalizedPower: a.normalized_power ?? null,
+                vo2max: (a.average_watts && a.average_heartrate)
+                    ? estimateVO2max(a.average_watts, a.average_heartrate) : null,
+                decoupling: a.decoupling ?? null,
+                best1min: a.best_1min ?? null,
+                best5min: a.best_5min ?? null,
+                best20min: a.best_20min ?? null,
+            })).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
             
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
@@ -1148,35 +1128,33 @@
     }
     
     function createZoneSummaryChart() {
-        // Aggregate all power data across activities
-        const allWatts = allActivities.flatMap(a => a.streams?.watts || []);
-        if (allWatts.length === 0) return;
-        
-        // Estimate FTP from best 20min power
-        const best20minAll = d3.max(allActivities, a => a.best20min) || 200;
-        const estimatedFTP = best20minAll * 0.95;
-        
-        const zones = [
-            { name: 'Z1 Recovery', min: 0, max: 0.55, color: '#95a5a6', time: 0 },
-            { name: 'Z2 Endurance', min: 0.55, max: 0.75, color: '#3498db', time: 0 },
-            { name: 'Z3 Tempo', min: 0.75, max: 0.90, color: '#2ecc71', time: 0 },
-            { name: 'Z4 Threshold', min: 0.90, max: 1.05, color: '#f39c12', time: 0 },
-            { name: 'Z5 VO2max', min: 1.05, max: 1.20, color: '#e74c3c', time: 0 },
-            { name: 'Z6 Anaerobic', min: 1.20, max: Infinity, color: '#9b59b6', time: 0 }
+        const zonesMeta = [
+            { name: 'Z1 Recovery',  color: '#95a5a6' },
+            { name: 'Z2 Endurance', color: '#3498db' },
+            { name: 'Z3 Tempo',     color: '#2ecc71' },
+            { name: 'Z4 Threshold', color: '#f39c12' },
+            { name: 'Z5 VO2max',    color: '#e74c3c' },
+            { name: 'Z6 Anaerobic', color: '#9b59b6' }
         ];
-        
-        allWatts.forEach(w => {
-            const pctFtp = w / estimatedFTP;
-            for (const zone of zones) {
-                if (pctFtp >= zone.min && pctFtp < zone.max) {
-                    zone.time++;
-                    break;
-                }
+
+        // Aggregate zone_seconds across all activities
+        const totals = [0, 0, 0, 0, 0, 0];
+        allActivities.forEach(a => {
+            if (a.zone_seconds) {
+                a.zone_seconds.forEach((s, i) => { totals[i] += s; });
             }
         });
-        
-        const total = allWatts.length;
-        zones.forEach(z => z.percent = (z.time / total) * 100);
+        const total = totals.reduce((a, b) => a + b, 0);
+        if (total === 0) return;
+
+        const zones = zonesMeta.map((z, i) => ({
+            ...z,
+            time: totals[i],
+            percent: (totals[i] / total) * 100,
+        }));
+
+        const best20minAll = d3.max(allActivities, a => a.best20min) || 200;
+        const estimatedFTP = best20minAll * 0.95;
         
         const container = d3.select('#zone-summary-chart');
         const margin = { top: 20, right: 120, bottom: 30, left: 120 };
