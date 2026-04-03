@@ -1,6 +1,42 @@
 {
-  "last_updated": "2026-04-02T05:07:53.989419818+00:00",
+  "last_updated": "2026-04-03T05:10:10.313196243+00:00",
   "activities": [
+    {
+      "id": 17952559547,
+      "name": "Zwift - Hairpin Wizard",
+      "start_date": "2026-04-02T16:32:35Z",
+      "start_date_local": "2026-04-02T18:32:35Z",
+      "distance": 24529.0,
+      "moving_time": 2674,
+      "average_watts": 139.9,
+      "weighted_average_watts": 149.0,
+      "max_watts": 223.0,
+      "average_heartrate": 150.6,
+      "max_heartrate": 175.0,
+      "average_cadence": 75.9,
+      "total_elevation_gain": 66.0,
+      "kilojoules": 374.2,
+      "normalized_power": 150.75767158277372,
+      "efficiency_factor": 0.9994820786518578,
+      "decoupling": 9.561173303774053,
+      "best_5s": 221.2,
+      "best_30s": 209.93333333333334,
+      "best_1min": 190.96666666666667,
+      "best_2min": 178.50833333333333,
+      "best_5min": 171.39,
+      "best_10min": 166.68833333333333,
+      "best_20min": 150.45666666666668,
+      "best_60min": null,
+      "zone_seconds": [
+        658,
+        658,
+        1147,
+        90,
+        90,
+        0
+      ],
+      "hr_recovery": 32.599999999999994
+    },
     {
       "id": 17927560392,
       "name": "Zwift - Hairpin Wizard",
