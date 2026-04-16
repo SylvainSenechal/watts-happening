@@ -1,6 +1,42 @@
 {
-  "last_updated": "2026-04-15T05:29:33.525509605+00:00",
+  "last_updated": "2026-04-16T05:35:15.748149463+00:00",
   "activities": [
+    {
+      "id": 18123211115,
+      "name": "Zwift - Hairpin Wizard",
+      "start_date": "2026-04-15T18:47:06Z",
+      "start_date_local": "2026-04-15T20:47:06Z",
+      "distance": 21102.3,
+      "moving_time": 2666,
+      "average_watts": 140.3,
+      "weighted_average_watts": 149.0,
+      "max_watts": 222.0,
+      "average_heartrate": 153.1,
+      "max_heartrate": 175.0,
+      "average_cadence": 77.9,
+      "total_elevation_gain": 185.0,
+      "kilojoules": 374.2,
+      "normalized_power": 150.81695359185605,
+      "efficiency_factor": 0.9845975172639553,
+      "decoupling": 11.390476974628706,
+      "best_5s": 220.4,
+      "best_30s": 209.83333333333334,
+      "best_1min": 191.31666666666666,
+      "best_2min": 178.59166666666667,
+      "best_5min": 171.52666666666667,
+      "best_10min": 166.70166666666665,
+      "best_20min": 150.61416666666668,
+      "best_60min": null,
+      "zone_seconds": [
+        666,
+        658,
+        1136,
+        96,
+        88,
+        0
+      ],
+      "hr_recovery": 23.46666666666667
+    },
     {
       "id": 18084524403,
       "name": "Zwift - recup 45 min",
