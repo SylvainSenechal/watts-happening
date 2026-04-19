@@ -1,6 +1,42 @@
 {
-  "last_updated": "2026-04-18T05:12:21.426762889+00:00",
+  "last_updated": "2026-04-19T05:33:35.043578042+00:00",
   "activities": [
+    {
+      "id": 18163737432,
+      "name": "Zwift - TT#4 Training for the 1st 5 min",
+      "start_date": "2026-04-18T20:42:16Z",
+      "start_date_local": "2026-04-18T22:42:16Z",
+      "distance": 20848.0,
+      "moving_time": 2950,
+      "average_watts": 115.7,
+      "weighted_average_watts": 138.0,
+      "max_watts": 202.0,
+      "average_heartrate": 144.0,
+      "max_heartrate": 167.0,
+      "average_cadence": 74.7,
+      "total_elevation_gain": 173.0,
+      "kilojoules": 341.3,
+      "normalized_power": 145.37746974480024,
+      "efficiency_factor": 1.0095824322674125,
+      "decoupling": 4.242293615397177,
+      "best_5s": 201.6,
+      "best_30s": 200.06666666666666,
+      "best_1min": 199.8,
+      "best_2min": 182.75,
+      "best_5min": 141.73666666666668,
+      "best_10min": 136.50666666666666,
+      "best_20min": 127.15416666666667,
+      "best_60min": null,
+      "zone_seconds": [
+        1543,
+        564,
+        117,
+        720,
+        0,
+        0
+      ],
+      "hr_recovery": 31.133333333333326
+    },
     {
       "id": 18123211115,
       "name": "Zwift - Hairpin Wizard",
